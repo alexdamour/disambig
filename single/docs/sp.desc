@@ -1,0 +1,51 @@
+%Input lines for the custom header file
+%Be sure to include headers (e.g. math.h) that might
+%be necessary for your comparison functions to compile.
+%
+%Also, define any custom structures that "extract" might
+%return to comparison functions that need more than one
+%field from the records.
+%
+%Finally, be sure to define constants for the "extract_idx"
+%argument of the "extract" function for cases where it needs
+%to return a more complicated structure. It is easiest to
+%define these in terms of SQLITE_DB_NUMFIELDS (defined in 
+%sqlite_db_local.h).
+%
+%Example headers
+%#include <math.h>
+%#include "strcmp95.h"
+%
+%Example constant and struct definitions
+%#define LATLON SQLITE_DB_NUMFIELDS
+%
+%typedef struct {
+%    double lat;
+%    double lon;
+%} latlon;
+
+res_space{
+%   type        levels
+%   jwres       JWSUB75,JWMISSING,JW75,JW85,JW95,JW100
+}
+
+simprof{
+%   type        name    func        extract_idx                 group
+%   jwres       fname   jwcmp       SQLITE_DB_INDX_FIRSTNAME    fname       
+}
+
+match_sets{
+%   match_table_names
+%   tset01_F
+%   tset05_F
+}
+
+nonmatch_sets{
+%   nonmatch_table_names
+%   xset01_F
+}
+
+training{
+%   group       match_sets                     nonmatch_sets
+%   fname       tset01_F,tset05_F              xset01_F
+}

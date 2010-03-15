@@ -1,0 +1,14 @@
+Berkeley DB >= 4.7.25
+	(Need to modify /etc/ld.so.conf to include a line for libraries in the bdb lib directory)
+	See: http://archives.postgresql.org/pgsql-admin/2002-06/msg00214.php
+
+    Also, change Makefile and setup.py to reflect actual location of Berkeley DB library.
+
+sqlite >= 3
+Python >= 2.5
+Python Development files (Python.h)
+CVXOPT
+rpy2
+
+R >= 2.8
+    geometry
