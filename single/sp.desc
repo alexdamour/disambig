@@ -1,0 +1,56 @@
+#include <math.h>
+#include "strcmp95.h"
+
+#define LATLON SQLITE_DB_NUMFIELDS
+#define ASG_FIELDS  SQLITE_DB_NUMFIELDS+1
+
+typedef struct {
+    double lat;
+    double lon;
+} latlon;
+
+typedef struct {
+    char* asgname;
+    u_int32_t asgnum;
+} asg_struct;
+
+res_space{
+%   type        levels
+    jwres       JWSUB75,JWMISSING,JW75,JW85,JW95,JW100
+    distres     DIST100PLUS,DISTMISSING,DIST100,DIST75,DIST50,DIST10,DIST0
+    disttype    NO_STREET,HAVE_STREET
+    classres    CLASS0,CLASSMISS,CLASS25,CLASS50,CLASS75PLUS
+    coauthres   C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10
+    midnameres  M0,MMISSING,M33,M67,M100
+}
+
+simprof{
+%   type        name    func        extract_idx                 group
+    jwres       fname   jwcmp       SQLITE_DB_INDX_FIRSTNAME    fname       
+    midnameres  midname midnamecmp  SQLITE_DB_INDX_FIRSTNAME    fname
+    distres     dist    distcmp     LATLON                      loc
+    disttype    dt      disttypecmp SQLITE_DB_INDX_COUNTRY      loc
+    jwres       asg     asgcmp      ASG_FIELDS                  other
+    jwres       firm    jwcmp       SQLITE_DB_INDX_LAW_ID       other
+    classres    cl      classcmp    SQLITE_DB_INDX_CLASS        other
+    coauthres   coauths coauthcmp   SQLITE_DB_INDX_COAUTHS      coauths
+}
+
+match_sets{
+    tset01_F
+    tset02_F
+    tset05_F
+}
+
+nonmatch_sets{
+    xset01_F
+    xset03_F
+}
+
+training{
+%   group       match_sets                     nonmatch_sets
+    fname       tset01_F,tset05_F              xset01_F
+    loc         tset02_F,tset05_F              xset03_F
+    other       tset01_F,tset02_F,tset05_F     xset01_F,xset03_F
+    coauths     tset01_F,tset02_F              xset01_F,xset03_F
+}
