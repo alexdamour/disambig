@@ -669,7 +669,7 @@ code_header(){
 
     fprintf(hfp, "/* Custom function prototypes. */\n");
     fprintf(hfp, "/* Extractor function. */\n");
-    fprintf(hfp, "int extract(DbRecord*, const int, void**, size_t*);\n");
+    fprintf(hfp, "int extract(DbRecord*, const int, void**, size_t*, int*, size_t*, size_t*);\n");
     fprintf(hfp, "/* Comparison functions. */\n");
     for(spf = spfields, i=0; i < sp_field_cnt; ++i, ++spf)
         fprintf(hfp, "int %s(const void*, const void*, size_t);\n", spf->func);

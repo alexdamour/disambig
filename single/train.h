@@ -6,7 +6,7 @@
 
 #include "comp_engine.h"
 
-extern int fname_idx_callback(DB*, const DBT*, const DBT*, DBT*);
+extern int name_idx_callback(DB*, const DBT*, const DBT*, DBT*);
 extern int loc_idx_callback(DB*, const DBT*, const DBT*, DBT*);
 extern int other_idx_callback(DB*, const DBT*, const DBT*, DBT*);
 extern int coauths_idx_callback(DB*, const DBT*, const DBT*, DBT*);

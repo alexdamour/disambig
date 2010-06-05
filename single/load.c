@@ -14,6 +14,8 @@ struct sqlite_workspace{
     DBT data;
     u_int32_t primary_key;
     DbField *f;
+    char buf[1024*10];
+    db_recno_t *count;
 };
 
 static int build_record(sqlite3_stmt*, DbRecord*, struct sqlite_workspace*);
@@ -30,7 +32,8 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
     sqlite3_stmt *ppStmt;
     DbRecord recordp;
     DB_BTREE_STAT *stat;
-    db_recno_t count;
+    db_recno_t count=0;
+    w.count = &count;
     db_recno_t max = 0;
     char big_block[128];
 
@@ -52,15 +55,21 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
     ret = cursor->close(cursor);
 
     sqlite3_prepare_v2(sql_db, sql_query, -1, &ppStmt, NULL);
-    while(SQLITE_ROW == sqlite3_step(ppStmt)){
+    while(SQLITE_ROW == (ret=sqlite3_step(ppStmt))){
+        memcpy(&recordp, &DbRecord_base, sizeof(DbRecord));
         build_record(ppStmt, &recordp, &w);
         DbRecord_write(&recordp, db, &w);
+        if((count++ % 1000000)==0){
+            printf("%lu records processed...\n", (ulong)count);
+            db->sync(db, 0);
+        }
     }
+    count = 0;
     sqlite3_finalize(ppStmt);
 
     db->cursor(db, NULL, &cursor, 0);
     cursor->get(cursor, &(w.key), &(w.data), DB_LAST);
-    //DbRecord_dump(w.data.data);
+    DbRecord_dump(w.data.data);
 
     db->stat(db, NULL, &stat, 0);
     printf("primary nkeys: %lu\n", (u_long)(stat->bt_nkeys));
@@ -71,7 +80,7 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
     printf("block_idx keys: %lu\n", (u_long)(stat->bt_nkeys));
     free(stat);
     sdb->cursor(sdb, NULL, &cursor, 0);
-    /*
+    
     while(DB_NOTFOUND != cursor->pget(cursor, &(w.key), &pkey, &(w.data), DB_NEXT)){
         cursor->count(cursor, &count, 0);
         if (count > max){
@@ -83,7 +92,7 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
     cursor->close(cursor);
     printf("Biggest block: %s\n", big_block);
     printf("%u records.\n", (size_t)max);
-    */
+    
     count_blocks(sdb);
     sdb->close(sdb, 0);
 
@@ -93,6 +102,7 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
     printf("idx_keys: %lu\n", (u_long)(stat->bt_nkeys));
     free(stat);
     sdb->close(sdb, 0);
+    
     
     return(0);
 }
@@ -112,9 +122,10 @@ static int count_blocks(DB *sdb){
     while(DB_NOTFOUND != cursor->get(cursor, &key, &data, DB_NEXT_NODUP)){
         cursor->count(cursor, &dup_count, 0);
         if((int)dup_count > 500)
-            fprintf(fp, "%s, %u\n", (char*)key.data, (size_t)dup_count);
+            fprintf(fp, "%s, %lu\n", (char*)key.data, (size_t)dup_count);
     }
     fclose(fp);
+    return 0;
 }
 
 static int DbRecord_write(DbRecord *recordp, DB *db, struct sqlite_workspace *w){
@@ -137,26 +148,75 @@ static int DbRecord_write(DbRecord *recordp, DB *db, struct sqlite_workspace *w)
 }
 
 static int build_record(sqlite3_stmt *ppStmt, DbRecord *recordp, struct sqlite_workspace* w){
-    int i, cols = sqlite3_column_count(ppStmt); 
+    int i, j, cols = sqlite3_column_count(ppStmt); 
+    char *num_delim = "~";
+    char *element_delim= "/";
+    char *w_buf;
+    char *out_ptr, *in_ptr;
+
+    if(*(w->count) == 36781)
+        printf("ha!\n");
+
     for(i = 0, w->f = fieldlist; i < cols && w->f->name != NULL; (w->f)++, i++){
         //switch(sqlite3_column_type(ppStmt, i)){
-        switch(w->f->type){
-            case UNSIGNED_LONG:
-                *(int*)((char*)recordp+(w->f->offset)) = sqlite3_column_int(ppStmt, i);
-                break;
-            case STRING:
-                memcpy((char*)recordp+(w->f->offset), sqlite3_column_text(ppStmt, i), sqlite3_column_bytes(ppStmt, i));
-                *((char*)recordp+(w->f->offset)+sqlite3_column_bytes(ppStmt, i)) = '\0';
-                break;
-            case DATE:
-                strptime((char*)sqlite3_column_text(ppStmt, i), "%Y%m%d", 
-                        (struct tm*)((char*)recordp+(w->f->offset)));
-                break;
-            case DOUBLE:
-                *(double*)((char*)recordp+(w->f->offset)) = sqlite3_column_double(ppStmt, i);
-                break;
-            default:
-                abort();
+        if(w->f->array){
+            j=0;
+            memcpy(w->buf, sqlite3_column_text(ppStmt, i), sqlite3_column_bytes(ppStmt, i)+1);
+            w_buf = w->buf;
+            while((out_ptr=strsep(&(w_buf), element_delim)) != NULL){
+                if(j >= w->f->array_len)
+                    break;
+                in_ptr=strsep(&out_ptr, num_delim);
+                switch(w->f->type){
+                    case UNSIGNED_LONG:
+                        *(((int*)((char*)recordp+(w->f->offset)))+j) = atoi(in_ptr);
+                        break;
+                    case STRING:
+                        memcpy((char*)recordp+(w->f->offset)+(j*(w->f->size)), in_ptr,
+                                MIN(w->f->size-1, strlen(in_ptr)+1));
+                        if(strlen(in_ptr)+1 > w->f->size)
+                            *((char*)recordp+(w->f->offset)+(j*(w->f->size))+(w->f->size)-1) = '\0';
+                        //if(j > 1)
+                        //    printf("%s\n", in_ptr);
+                        break;
+                    case DATE:
+                        strptime(in_ptr, "%Y%m%d", ((struct tm*)((char*)recordp+(w->f->offset)))+j);
+                        break;
+                    case DOUBLE:
+                        *(((double*)((char*)recordp+(w->f->offset)))+j) = strtod(in_ptr, NULL);
+                        break;
+                    default:
+                        abort();
+                }
+                ++j;
+            }
+            //if(j+1 < w->f->array_len)
+                
+        }
+
+        else{    
+            switch(w->f->type){
+                case UNSIGNED_LONG:
+                    *(int*)((char*)recordp+(w->f->offset)) = sqlite3_column_int(ppStmt, i);
+                    break;
+                case STRING:
+                    //printf("%lu\n", *(w->count));
+                    //if(*(w->count) > 36781)
+                    //    printf("%s\n", sqlite3_column_text(ppStmt, i));
+                    memcpy((char*)recordp+(w->f->offset), sqlite3_column_text(ppStmt, i),
+                            MIN(w->f->size-1,sqlite3_column_bytes(ppStmt, i)));
+                    *((char*)recordp+(w->f->offset)+MIN(w->f->size-1, sqlite3_column_bytes(ppStmt, i))) = '\0';
+                    break;
+                case DATE:
+                    strptime((char*)sqlite3_column_text(ppStmt, i), "%Y%m%d", 
+                            (struct tm*)((char*)recordp+(w->f->offset)));
+                    break;
+                case DOUBLE:
+                    *(double*)((char*)recordp+(w->f->offset)) = sqlite3_column_double(ppStmt, i);
+                    break;
+                default:
+                    abort();
+            }
         }
     }
     if(i < cols){

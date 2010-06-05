@@ -5,23 +5,28 @@
 datatype block_type = STRING;
 
 int blocking_callback(DB* db_secondary, const DBT* key, const DBT* data, DBT* result){
-    char* finit_lname;
+    char* fname_lname;
     size_t len_lname;
+    size_t len_fname;
     DbRecord *recordp = (DbRecord*)data->data;
 
     db_secondary=db_secondary;
     key=key;
 
-    len_lname = strlen(recordp->Lastname);
-    finit_lname = (char*) malloc(sizeof(char)*len_lname+3);
+    len_fname = strlen(recordp->Block1);
+    //printf("%s, %u, ", recordp->Block1, len_fname);
+    len_lname = strlen(recordp->Block2);
+    //printf("%s, %u, ", recordp->Block2, len_lname);
+    fname_lname = (char*) malloc(sizeof(char)*len_lname+sizeof(char)*len_fname+2);
     
-    finit_lname[0]=recordp->Firstname[0];
-    finit_lname[1]='.';
-    memcpy(finit_lname+2, recordp->Lastname, len_lname);
-    finit_lname[len_lname+2]='\0';
+    memcpy(fname_lname,recordp->Block1, len_fname);
+    fname_lname[len_fname]='.';
+    memcpy(fname_lname+len_fname+1, recordp->Block2, len_lname);
+    fname_lname[len_lname+len_fname+1]='\0';
+    //printf("%s\n", fname_lname);
     
-    result->data = finit_lname;
-    result->size = sizeof(char)*len_lname+3;
+    result->data = fname_lname;
+    result->size = sizeof(char)*len_lname+sizeof(char)*len_fname+2;
     result->flags = result->flags | DB_DBT_APPMALLOC;
     return(0);
 }

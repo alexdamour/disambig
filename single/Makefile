@@ -58,7 +58,7 @@ TRAIN_OBJS=sqlite_db_local.o db.o util.o train.o train_main.o compfun.o comp_eng
 train: $(TRAIN_OBJS)
 	$(CC) -o $@ $(TRAIN_OBJS) $(LIBS)
 
-DUMP_OBJS=sqlite_db_local.o db.o util.o dump_primary.o
+DUMP_OBJS=sqlite_db_local.o db.o util.o dump_primary.o blockfun.o
 dump: $(DUMP_OBJS)
 	$(CC) -o $@ $(DUMP_OBJS) $(LIBS)
 
@@ -67,7 +67,7 @@ clear: $(CLEAR_OBJS)
 	$(CC) -o $@ $(CLEAR_OBJS) $(LIBS)
 
 clean distclean realclean:
-	rm -rf $(PROGS) TESTDIR eBay tags *.o *.core sqlite_db_local.[ch] primary block_idx idx simprof tset0* xset0*
+	rm -rf $(PROGS) TESTDIR eBay tags *.o *.core sqlite_db_local.[ch] #primary block_idx idx simprof tset0* xset0*
 
 primaryclean:
 	rm -rf primary block_idx idx
@@ -106,7 +106,7 @@ comp_engine.o comp_spec.o: sqlite_db_local.h sqlite_db.h strcmp95.h comp_spec.h 
 sqlite_db_local.c sqlite_db_local.h: sqlite_db_code data.desc
 	./sqlite_db_code -v -c sqlite_db_local.c -h sqlite_db_local.h -f data.desc
 
-comp_spec.c comp_spec.h compfun.c: sp_code sp.desc
+comp_spec.c comp_spec.h compfun.c train.h: sp_code sp.desc
 	./sp_code -v -f sp.desc
 
 lint_code:

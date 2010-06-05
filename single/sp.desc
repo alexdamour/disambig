@@ -1,6 +1,9 @@
 #include <math.h>
 #include "strcmp95.h"
 
+#define TRIPLET_ON 1 
+#define LIK_CUTOFF 0.95
+
 #define LATLON SQLITE_DB_NUMFIELDS
 #define ASG_FIELDS  SQLITE_DB_NUMFIELDS+1
 
@@ -16,7 +19,7 @@ typedef struct {
 
 res_space{
 %   type        levels
-    jwres       JWSUB75,JWMISSING,JW75,JW85,JW95,JW100
+    jwres       JWSUB33,JWMISSING,JW66,JW100,JW100MULT,JW100MULTFULL
     distres     DIST100PLUS,DISTMISSING,DIST100,DIST75,DIST50,DIST10,DIST0
     disttype    NO_STREET,HAVE_STREET
     classres    CLASS0,CLASSMISS,CLASS25,CLASS50,CLASS75PLUS
@@ -26,31 +29,31 @@ res_space{
 
 simprof{
 %   type        name    func        extract_idx                 group
-    jwres       fname   jwcmp       SQLITE_DB_INDX_FIRSTNAME    fname       
-    midnameres  midname midnamecmp  SQLITE_DB_INDX_FIRSTNAME    fname
+    jwres       fname   jwcmp       SQLITE_DB_INDX_FIRSTNAME    name       
+    midnameres  midname midnamecmp  SQLITE_DB_INDX_FIRSTNAME    name
+    jwres       lname   jwcmp       SQLITE_DB_INDX_LASTNAME     name
     distres     dist    distcmp     LATLON                      loc
     disttype    dt      disttypecmp SQLITE_DB_INDX_COUNTRY      loc
     jwres       asg     asgcmp      ASG_FIELDS                  other
-    jwres       firm    jwcmp       SQLITE_DB_INDX_LAW_ID       other
     classres    cl      classcmp    SQLITE_DB_INDX_CLASS        other
     coauthres   coauths coauthcmp   SQLITE_DB_INDX_COAUTHS      coauths
 }
 
 match_sets{
-    tset01_F
-    tset02_F
-    tset05_F
+%    tset01_F_2
+    tset02_F_2
+    tset05_F_2
 }
 
 nonmatch_sets{
-    xset01_F
-    xset03_F
+    xset01_F_2
+    xset03_F_2
 }
 
 training{
-%   group       match_sets                     nonmatch_sets
-    fname       tset01_F,tset05_F              xset01_F
-    loc         tset02_F,tset05_F              xset03_F
-    other       tset01_F,tset02_F,tset05_F     xset01_F,xset03_F
-    coauths     tset01_F,tset02_F              xset01_F,xset03_F
+%   group       match_sets                           nonmatch_sets
+    name        tset05_F_2                xset01_F_2
+    loc         tset02_F_2,tset05_F_2                xset03_F_2
+    other       tset02_F_2,tset05_F_2     xset01_F_2,xset03_F_2
+    coauths     tset02_F_2                xset01_F_2,xset03_F_2
 }

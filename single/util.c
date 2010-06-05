@@ -310,24 +310,31 @@ field_cmp_ulong(void *a, void *b, OPERATOR op)
 }
 
 int DbRecord_dump(DbRecord *recordp){
+    int j;
     DbField *f;
     for(f=fieldlist; f->name != NULL; ++f){
-        switch(f->type){
-            case NOTSET:
-                abort();
-                return(1);
-            case DOUBLE:
-                printf("%s: %g\n", f->name, *(double*)((char*)recordp+f->offset));
+        for(j=0; j < MAX(1,f->array_len); j++){
+            switch(f->type){
+                case NOTSET:
+                    abort();
+                    return(1);
+                case DOUBLE:
+                    printf("%s: %g\n", f->name, *(double*)((char*)recordp+f->offset+(f->size*j)));
+                    break;
+                case STRING:
+                    printf("%s: %s\n", f->name, ((char*)recordp+f->offset+f->size*j));
+                    break;
+                case UNSIGNED_LONG:
+                    printf("%s: %lu\n", f->name, (ulong) *(u_int32_t*)((char*)recordp+f->offset+(f->size*j)));
+                    break;
+                case DATE:
+                    printf("%s: %s\n", f->name, (char*) asctime((struct tm*)((char*)recordp+f->offset+f->size*j)));
+                    break;
+            }
+            if(*((char*)recordp+f->offset+(f->size)*j) ==
+               *((char*)(&DbRecord_base)+f->offset+(f->size)*j))
                 break;
-            case STRING:
-                printf("%s: %s\n", f->name, (char*)recordp+f->offset);
-                break;
-            case UNSIGNED_LONG:
-                printf("%s: %lu\n", f->name, (ulong) *(u_int32_t*)((char*)recordp+f->offset));
-                break;
-            case DATE:
-                printf("%s: %s\n", f->name, (char*) asctime((struct tm*)((char*)recordp+f->offset)));
-                break;
+
         }
     }
     printf("-------------------\n");

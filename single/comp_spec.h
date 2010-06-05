@@ -13,6 +13,9 @@
 #include <math.h>
 #include "strcmp95.h"
 
+#define TRIPLET_ON 1 
+#define LIK_CUTOFF 0.95
+
 #define LATLON SQLITE_DB_NUMFIELDS
 #define ASG_FIELDS  SQLITE_DB_NUMFIELDS+1
 
@@ -33,7 +36,7 @@ typedef struct {
 /* End custom header from sp.desc file. */
 
 /* Define result space levels. */
-typedef enum {JWSUB75,JWMISSING,JW75,JW85,JW95,JW100} jwres;
+typedef enum {JWSUB33,JWMISSING,JW66,JW100,JW100MULT,JW100MULTFULL} jwres;
 typedef enum {DIST100PLUS,DISTMISSING,DIST100,DIST75,DIST50,DIST10,DIST0} distres;
 typedef enum {NO_STREET,HAVE_STREET} disttype;
 typedef enum {CLASS0,CLASSMISS,CLASS25,CLASS50,CLASS75PLUS} classres;
@@ -44,10 +47,10 @@ typedef enum {M0,MMISSING,M33,M67,M100} midnameres;
 typedef struct __simprof {
 	jwres fname;
 	midnameres midname;
+	jwres lname;
 	distres dist;
 	disttype dt;
 	jwres asg;
-	jwres firm;
 	classres cl;
 	coauthres coauths;
 } simprof;
@@ -59,14 +62,14 @@ size_t sp_offsets[];
 
 /* Custom function prototypes. */
 /* Extractor function. */
-int extract(DbRecord*, const int, void**, size_t*);
+int extract(DbRecord*, const int, void**, size_t*, int*, size_t*, size_t*);
 /* Comparison functions. */
 int jwcmp(const void*, const void*, size_t);
 int midnamecmp(const void*, const void*, size_t);
+int jwcmp(const void*, const void*, size_t);
 int distcmp(const void*, const void*, size_t);
 int disttypecmp(const void*, const void*, size_t);
 int asgcmp(const void*, const void*, size_t);
-int jwcmp(const void*, const void*, size_t);
 int classcmp(const void*, const void*, size_t);
 int coauthcmp(const void*, const void*, size_t);
 

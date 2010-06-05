@@ -1,6 +1,7 @@
 #include "comp_spec.h"
 
 extern int compare_records(DBT *, DBT *, simprof *);
+int listcmp(const void *, const void *, size_t, int (*)(const void *, const void*, size_t), size_t, size_t, size_t);
 
 //From comp_spec.c
 int num_comps;
@@ -10,6 +11,7 @@ size_t sp_offsets[];
 
 char* has_tag(DbRecord*);
 int apply_tag(DbRecord*, char*);
+int tagcmp(DbRecord*, DbRecord*);
 
 int stop_comp(DbRecord*, DbRecord*);
 

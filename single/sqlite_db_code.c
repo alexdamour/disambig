@@ -14,6 +14,8 @@ typedef struct {
 	datatype	type;		/* Data type */
     size_t      size;       /* Bytes allocated for data type */
 	int		    indx;		/* Index */
+    int         array;
+    size_t      array_len;
 } FIELD;
 
 int	 code_source(void);
@@ -192,6 +194,8 @@ desc_load()
 		p = t;
 
 		fields[field_cnt].indx = 0;
+        fields[field_cnt].array=0;
+        fields[field_cnt].array_len=0;
 		fields[field_cnt].type = NOTSET;
 		for (;;) {
 			/* Skip to the next field, if any. */
@@ -201,7 +205,7 @@ desc_load()
 				break;
 
 			/* Find the end of the field. */
-			for (t = p; *t != '\0' && !isspace(*t) && *t != '('; ++t)
+			for (t = p; *t != '\0' && !isspace(*t) && *t != '(' && *t!= '['; ++t)
 				;
 			save_ch = *t;
 			*t = '\0';
@@ -237,6 +241,25 @@ desc_load()
 				    "%s: unknown keyword: %s on line %d\n", progname, p, linenum);
 				return (1);
 			}
+
+            /* Detect array notation and flag the field as an array for special parsing */
+            if (save_ch=='['){
+                *t++ = save_ch;
+                for(n=t; *n != ']' && *n != '\0'; ++n){}
+                if(*n == '\0'){
+                    fprintf(stderr, "%s: Parse error line %d.", progname, linenum);
+                    return(1);
+                }
+                save_ch = *n;
+                printf("%c\n", save_ch);
+                *n = '\0';
+                fields[field_cnt].array = 1;
+                fields[field_cnt].array_len = (size_t) strtoul(t,NULL,10);
+                *n = save_ch;
+                t = ++n;
+                save_ch = *t;
+            }
+
 			*t = save_ch;
 			p = t;
 		}
@@ -289,6 +312,8 @@ desc_dump()
 		}
 		if (f->indx)
 			printf(", indexed");
+        if (f->array)
+            printf(", array of length %u", f->array_len);
 		printf(")\n");
 	}
 	return (0);
@@ -338,16 +363,27 @@ code_header()
 			abort();
 			break;
 		case DOUBLE:
-			fprintf(hfp, "\tdouble\t\t %s;\n", f->name);
+			fprintf(hfp, "\tdouble\t\t %s", f->name);
+            if (f->array)
+                fprintf(hfp, "[%u]", f->array_len);
+            fprintf(hfp, ";\n");
 			break;
 		case STRING:
-			fprintf(hfp, "\tchar\t\t%s[%u];\n", f->name, f->size);
+			fprintf(hfp, "\tchar\t\t%s", f->name);
+            if(f->array)
+                fprintf(hfp, "[%u]", f->array_len);
+            fprintf(hfp, "[%u];\n", f->size);
 			break;
 		case UNSIGNED_LONG:
-			fprintf(hfp, "\tu_int32_t\t\t %s;\n", f->name);
+			fprintf(hfp, "\tu_int32_t\t\t %s", f->name);
+            if (f->array)
+                fprintf(hfp, "[%u]", f->array_len);
+            fprintf(hfp,";\n");
 			break;
         case DATE:
             fprintf(hfp, "\tstruct tm\t\t %s;\n", f->name);
+            if (f->array)
+                fprintf(hfp, "[%u]", f->array_len);
 		}
         ++i;
 	}
@@ -365,7 +401,7 @@ int
 code_source()
 {
 	FIELD *f;
-	u_int i;
+	u_int i,j;
 
 	fprintf(cfp, "/*\n");
 	fprintf(cfp,
@@ -396,13 +432,34 @@ code_source()
 			break;
 		case DOUBLE:
 		case UNSIGNED_LONG:
-			fprintf(cfp, "\t0,\t\t/* %s */\n", f->name);
+            if(f->array){
+                fprintf(cfp, "{");
+                for(j=0; j < f->array_len; ++j)
+                    fprintf(cfp, "\t0,");
+                fprintf(cfp, "},\t\t/* %s */\n", f->name);
+            }
+            else
+                fprintf(cfp, "\t0,\t\t/* %s */\n", f->name);
 			break;
 		case STRING:
-			fprintf(cfp, "\t\"\",\t\t/* %s */\n", f->name);
+            if(f->array){
+                fprintf(cfp, "{");
+                for(j=0; j < f->array_len; ++j)
+                    fprintf(cfp, "\t\"\",");
+                fprintf(cfp, "},\t\t/* %s */\n", f->name);
+            }
+            else
+                fprintf(cfp, "\t\"\",\t\t/* %s */\n", f->name);
 			break;
         case DATE:
-            fprintf(cfp, "\t{0,0,0,1,0,0,0,0,0,0,\"GMT\"},\t\t/* %s */\n", f->name);
+            if(f->array){
+                fprintf(cfp, "{");
+                for(j=0; j < f->array_len; ++j)
+                    fprintf(cfp, "\t{0,0,0,1,0,0,0,0,0,0,\"GMT\"}");
+                fprintf(cfp, "},\t\t/* %s */\n", f->name);
+            }
+            else
+                fprintf(cfp, "\t{0,0,0,1,0,0,0,0,0,0,\"GMT\"},\t\t/* %s */\n", f->name);
 		}
 	}
 	fprintf(cfp, "};\n");
@@ -421,9 +478,11 @@ code_source()
             fprintf(cfp, " sizeof(%s),", type_to_ctype(f->type));
 		fprintf(cfp, " %d,", f->indx ? 1 : 0);
 		fprintf(cfp, " NULL,");
+        fprintf(cfp, " %d,", f->array ? 1 : 0);
+        fprintf(cfp, " %u,", f->array_len);
 		fprintf(cfp, " FIELD_OFFSET(%s)},\n", f->name);
 	}
-	fprintf(cfp, "\t{NULL, 0, STRING, 0, 0, NULL, 0}\n};\n");
+	fprintf(cfp, "\t{NULL, 0, STRING, 0, 0, NULL, 0, 0, 0}\n};\n");
 
     fprintf(cfp, "\n");
     fprintf(cfp, "char* sql_query = \"%s\";\n", sql_buf);

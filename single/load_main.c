@@ -97,7 +97,9 @@ main(int argc, char *argv[])
     printf("Timing started ...\n");
     start = clock();
 	ret = input_load(db, sql_db, sql_table);
+
     sqlite3_close(sql_db);
+    printf("sqlite3 closed.\n");
     end = clock();
     printf("Timing stopped.\n");
     

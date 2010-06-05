@@ -10,7 +10,7 @@
 #include "sqlite_db_local.h"
 #include "sqlite_db_extern.h"
 
-#define CACHE_GIGS 2
+#define CACHE_GIGS 4 
 #define CACHE_BYTES 0
 #define BLOCK_TAG_LEN 67
 

@@ -89,7 +89,7 @@ main(int argc, char *argv[])
     cur->close(cur);
 */
     w.idx_db = idx_db;
-    if(sqlite3_open("training_sets/tset.sqlite3", &sql_db))
+    if(sqlite3_open("training_sets/tsetC.sqlite3", &sql_db))
         return(EXIT_FAILURE);
 
 /*  Set these to 1 to keep from running that type of training set */
@@ -195,7 +195,7 @@ load_patseq(void* w, int argc, char **argv, char **err){
     memset(ws->key, 0, sizeof(*(ws->key)));
     memset(ws->pkey, 0, sizeof(*(ws->pkey)));
     memset(ws->data_i, 0, sizeof(*(ws->data_i)));
-    sprintf(ws->key_buf, "%s-%s", argv[0], argv[1]);
+    sprintf(ws->key_buf, "%s", argv[0]);
     //printf("%s\n", ws->key_buf);
 
     ws->key->data=ws->key_buf;
@@ -213,7 +213,7 @@ load_patseq(void* w, int argc, char **argv, char **err){
     memset(ws->key, 0, sizeof(*(ws->key)));
     memset(ws->pkey, 0, sizeof(*(ws->pkey)));
     memset(ws->data_j, 0, sizeof(*(ws->data_j)));
-    sprintf(ws->key_buf, "%s-%s", argv[2], argv[3]);
+    sprintf(ws->key_buf, "%s", argv[1]);
     //printf("%s\n", ws->key_buf);
 
     ws->key->data=ws->key_buf;
@@ -227,12 +227,12 @@ load_patseq(void* w, int argc, char **argv, char **err){
         return(0);
     }
     compare_records(ws->data_i, ws->data_j, &(ws->sp));
-/*
-    if(ws->sp.asg == 1 && ws->sp.firm == 4 && ws->sp.cl == 1 && ws->sp.coauths==1){
+
+    /*if(ws->sp.midname == 0){
         DbRecord_dump((DBT*)ws->data_i->data);
         DbRecord_dump((DBT*)ws->data_j->data);
-    }
-*/
+    }*/
+
     cur1->close(cur1);
     cur2->close(cur2);
 

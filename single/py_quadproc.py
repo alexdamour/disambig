@@ -8,6 +8,7 @@ import pickle
 import functools
 import rpy2.robjects as ro
 import numpy
+import operator
 from py_quadproc_include import *
 
 cvxopt.solvers.options['show_progress'] = False 
@@ -250,7 +251,7 @@ def smooth_ratios(support=supports):
         tuples = prof_tuples(prof_maxes[s])
         weights, r_bar = raw_ratios(s)
 
-        if len(prof_maxes[s]) > 1:
+        if 0: #len(prof_maxes[s]) > 1:
             wdict = dict(zip(tuples, weights))
             rdict = dict(zip(tuples, r_bar))
             obs = [tuples[i] for i in range(len(tuples)) if r_bar[i] > 0]
@@ -327,7 +328,9 @@ def smooth_ratios(support=supports):
     #print d
 
     full_tuples = [x for x in product(*tuple_lists)]
-    return dict([(flatten(t), ratio_dicts[0][t[0]]*ratio_dicts[1][t[1]]*ratio_dicts[2][t[2]]*ratio_dicts[3][t[3]]) for t in full_tuples])
+    return dict([(flatten(t),
+                    reduce(operator.mul, [ratio_dicts[i][t[i]] for i in range(len(support))], 1))
+                    for t in full_tuples])
 
 #def dominates(orig, G):
 #    a = numpy.array(co.matrix(G))

@@ -1,4 +1,4 @@
-/*-
+/*
  * See the file LICENSE for redistribution information.
  *
  * Copyright (c) 2005,2008 Oracle.  All rights reserved.
@@ -81,6 +81,9 @@ typedef struct {
 	int	  indx;				/* Indexed */
 	DB	 *secondary;			/* Secondary index handle */
 
+    int array;
+    size_t array_len;
+
 #define	FIELD_OFFSET(field)	((size_t)(&(((DbRecord *)0)->field)))
 	size_t	  offset;			/* DbRecord field offset */
 } DbField;
@@ -89,7 +92,7 @@ typedef struct {
 #define MIN(X,Y) ((X < Y) ? X : Y)
 #define DBT_CLEAR(X) memset(&X, 0, sizeof(X))
 
-#define PRIMARY_PAGE_KB 32
+#define PRIMARY_PAGE_KB 64 
 
 /*
  * Globals

@@ -7,40 +7,40 @@
 #include "train.h"
 
 char* matchset_names[] = {
-	"tset01_F",
-	"tset02_F",
-	"tset05_F",
+	"tset02_F_2",
+	"tset05_F_2",
 	NULL,
 };
 
 char *nonmatchset_names[] = {
-	"xset01_F",
-	"xset03_F",
+	"xset01_F_2",
+	"xset03_F_2",
 	NULL,
 };
 
 char *idx_names[] = {
-	"fname",
+	"name",
 	"loc",
 	"other",
 	"coauths",
 };
 
 int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*) = {
-	fname_idx_callback,
+	name_idx_callback,
 	loc_idx_callback,
 	other_idx_callback,
 	coauths_idx_callback,
 };
 
-int fname_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
+int name_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
 	sec = sec;
 	data = data;
-	int* fields = malloc(sizeof(int)*2);
+	int* fields = malloc(sizeof(int)*3);
 	fields[0] = ((simprof*)key->data)->fname;
 	fields[1] = ((simprof*)key->data)->midname;
+	fields[2] = ((simprof*)key->data)->lname;
 	result->data = fields;
-	result->size = sizeof(int)*2;
+	result->size = sizeof(int)*3;
 	result->flags = result->flags | DB_DBT_APPMALLOC;
 	return(0);
 }
@@ -60,12 +60,11 @@ int loc_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
 int other_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
 	sec = sec;
 	data = data;
-	int* fields = malloc(sizeof(int)*3);
+	int* fields = malloc(sizeof(int)*2);
 	fields[0] = ((simprof*)key->data)->asg;
-	fields[1] = ((simprof*)key->data)->firm;
-	fields[2] = ((simprof*)key->data)->cl;
+	fields[1] = ((simprof*)key->data)->cl;
 	result->data = fields;
-	result->size = sizeof(int)*3;
+	result->size = sizeof(int)*2;
 	result->flags = result->flags | DB_DBT_APPMALLOC;
 	return(0);
 }

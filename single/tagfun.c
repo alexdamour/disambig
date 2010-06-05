@@ -8,13 +8,17 @@ char* has_tag(DbRecord *data){
 }
 
 int apply_tag(DbRecord *data, char *tagp){
-    char invnum_buf[16];
+    //char invnum_buf[16];
     if(tagp == NULL){
-        memset(invnum_buf, '\0', 16);
-        sprintf(invnum_buf, "%s-%lu", data->Patent, (u_long)data->InvSeq);
-        memcpy(data->Invnum_N, invnum_buf, 16);
+        //memset(invnum_buf, '\0', 16);
+        //sprintf(invnum_buf, "%s-%lu", data->Patent, (u_long)data->InvSeq);
+        memcpy(data->Invnum_N, data->Invnum, 16);
     }
     else
        memcpy(data->Invnum_N, tagp, 16);
     return(0);
+}
+
+int tagcmp(DbRecord *data_i, DbRecord *data_j){
+    return strcmp(data_i->Invnum_N, data_j->Invnum_N);
 }
