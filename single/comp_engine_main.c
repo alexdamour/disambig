@@ -21,6 +21,7 @@ int main(int argc, char** argv){
     int ret, i, freeme, done;
     int custom_block = 0;
     u_int32_t block_num = 0;
+    u_int32_t trip = 0;
     size_t num_digs;
     double likelihood;
     db_recno_t dup_count, max_matches;
@@ -117,6 +118,16 @@ int main(int argc, char** argv){
             if((ret = cur_i->pget(cur_i, &key_i, &pkey_i, &data_i, DB_FIRST)))
                 return(1);
 */
+    i=0;
+    while(custom_block && DB_NOTFOUND !=
+            cur_i->pget(cur_i, &key_i, &pkey_i, &data_i, (i ? DB_NEXT_DUP : DB_SET))){
+        //printf("Clearing...\n");
+        if(strncmp(((DbRecord *)data_i.data)->Invnum_N, "\0", 1)){
+            memset(((DbRecord*)data_i.data)->Invnum_N, '\0', 16);
+            db->put(db, 0, &pkey_i, &data_i, 0);
+        }
+        i=1;
+    }
 
     while(DB_NOTFOUND !=
       cur_i->pget(cur_i, &key_i, &pkey_i, &data_i,
@@ -128,10 +139,11 @@ int main(int argc, char** argv){
         cur_i->count(cur_i, &dup_count, 0);
         if((int)dup_count > 100 || custom_block){
             printf("Big block: %s, %u records\n", (char*)key_i.data, (size_t)dup_count);
-            big_block = 1;
+        //    big_block = 1;
     //        continue;
         }
-        if(!custom_block && (int)dup_count > 400){
+        
+        if(!custom_block && (int)dup_count > 2000){
             printf("Block too big: %s, %u\n", (char*)key_i.data, (size_t)dup_count);
             fp = fopen(filename, "a");
             fprintf(fp, "%s, %u\n", (char*)key_i.data, (size_t)dup_count);
@@ -139,18 +151,23 @@ int main(int argc, char** argv){
             continue;
         }
 
-        Pr_M = MIN(1/5., 10/((double)dup_count));
+        Pr_M = MIN(1/10., 100/((double)dup_count));
 
-        if(!(++block_num % 1000) || (block_num < 1000 && !(block_num % 10))) { db->sync(db, 0); printf("%lu blocks processed...\n", (ulong)block_num); }
+        if(!(++block_num % 10000)/*|| (block_num < 1000 && !(block_num % 10))*/) {
+            db->sync(db, 0);
+            dbenv->memp_sync(dbenv, NULL);
+            printf("%lu blocks processed with %lu needing triplet correction...\n", (ulong)block_num, (ulong)trip);
+            
+        }
         if(strncmp(((DbRecord *)data_i.data)->Invnum_N, "\0", 1)){
             //printf("Skipped! %s\n", ((DbRecord *)data_i.data)->Invnum_N);
             
             if(custom_block){
-                printf("Block already has a tag. Clear tags and try again.\n");
+                memset(((DbRecord*)data_i.data)->Invnum_N, '\0', 16);
+                //printf("Block already has a tag. Clear tags and try again.\n");
                 ;
             }
             
-            //memset(((DbRecord*)data_i.data)->Invnum_N, '\0', 16);
             continue;
         }
         //else printf("Blocks previously processed: %lu\n", (ulong)block_num); 
@@ -171,13 +188,13 @@ int main(int argc, char** argv){
                 printf("num_recs: %lu\n", (u_long)dup_count);
             }
         */
-            ret = sqlite_db_primary_open(&sp_db, NULL, DB_BTREE, 16*1024, DB_CREATE, 0, NULL);
+            ret = sqlite_db_primary_open(&sp_db, NULL, DB_BTREE, 4*1024, DB_CREATE, 0, NULL);
             //ret = sqlite_db_primary_open(&sp_db, "simprof", DB_BTREE, 16*1024, DB_CREATE, 0, NULL);
             ret = sqlite_db_primary_open(&ldb, NULL, DB_BTREE, 4*1024, DB_CREATE, 0, NULL);
             //ret = sqlite_db_primary_open(&ldb, "lik_db", DB_BTREE, 4*1024, DB_CREATE, 0, NULL);
-            ret = sqlite_db_secondary_open(ldb, &first, NULL, 16*1024, DB_DUPSORT, first_index, NULL);
+            ret = sqlite_db_secondary_open(ldb, &first, NULL, 4*1024, DB_DUPSORT, first_index, NULL);
             //ret = sqlite_db_secondary_open(ldb, &first, "first_idx", 16*1024, DB_DUPSORT, first_index, NULL);
-            ret = sqlite_db_secondary_open(ldb, &second, NULL, 16*1024, DB_DUPSORT, second_index, NULL);
+            ret = sqlite_db_secondary_open(ldb, &second, NULL, 4*1024, DB_DUPSORT, second_index, NULL);
             //ret = sqlite_db_secondary_open(ldb, &second, "second_idx", 16*1024, DB_DUPSORT, second_index, NULL);
             if(ret)
                 printf("DB open problem! %d\n", ret);
@@ -237,21 +254,27 @@ int main(int argc, char** argv){
                        
                 }
          //       printf("%lu matches in block.\n", (u_long)matches);
+                cur_j->close(cur_j);
             } while(DB_NOTFOUND !=
                 cur_i->pget(cur_i, &key_i, &pkey_i, &data_i, DB_NEXT_DUP));
             num_comps = (dup_count*(dup_count-1))/2;
             //printf("matches: %lu\n", (u_long)matches);
-            if(fabs(((double)(Pr_M*num_comps-matches))/((double)matches)) > 0.1){
-                //printf("Pr_M: %g, Emp: %g\n", Pr_M, (double)matches/(double)num_comps);
+            if(num_comps != 0 && fabs(((double)(Pr_M*num_comps-matches))/((double)matches)) > 0.001){
+                if(custom_block)
+                    printf("Pr_M: %g, Emp: %g\n", Pr_M, (double)matches/(double)num_comps);
                 Pr_M = (double)matches/(double)num_comps;//(double)matches/(double)dup_count;
             }
             else{
-                //printf("Pr_M: %g, Emp: %g\n", Pr_M, (double)matches/(double)num_comps);
+                if(custom_block)
+                    printf("Pr_M: %g, Final Emp: %g\n", Pr_M, (double)matches/(double)num_comps);
                 done = 1;
             }
 
-            if(done && (double)matches/(double)num_comps != 1.0)
+            if(done && fabs((double)matches/(double)num_comps-1) > 0.0000001){
                 ret = triplet_correct(tri_cur, ldb, first, second);
+                tri_cur->close(tri_cur);
+                ++trip;
+            }
             //sqlite_db_secondary_open(ldb, &match, "match_idx", 8*1024, DB_DUPSORT, match_index, NULL);
             
             /*
@@ -272,8 +295,10 @@ int main(int argc, char** argv){
     //        match->stat(match, NULL, &stat, 0);
     //        printf("match_idx_nkeys: %lu\n", (u_long)(stat->bt_nkeys));
     //        free(stat);
-            if(done)
+            if(done){
                 clump(tag_cur, ldb, first, second, match, db);
+                tag_cur->close(tag_cur);
+            }
             //match->close(match,0);
             first->close(first, 0);
             second->close(second, 0);
@@ -348,7 +373,7 @@ int main(int argc, char** argv){
 
     //cur->close(cur);
     cur_i->close(cur_i); 
-    cur_j->close(cur_j);
+    //cur_j->close(cur_j);
     r_cur->close(r_cur);
     //sp_db->close(sp_db, 0);
     rdb->close(rdb, 0);
