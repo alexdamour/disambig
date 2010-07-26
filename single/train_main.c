@@ -96,6 +96,9 @@ main(int argc, char *argv[])
 //    match_done = 1;
 //    non_done = 1;
 
+    /* Initialize comparison environment. */
+    comp_env_init();
+
     for(t_idx=0; !(match_done && non_done); ++t_idx){
         /* Match (Positive) Training Sets */
         if(matchset_names[t_idx] == NULL)
@@ -168,6 +171,9 @@ main(int argc, char *argv[])
             no_db->close(no_db, 0);
         }
     }
+
+    /* Clean up comparison environment. */
+    comp_env_clean();
     
     end = clock();
     printf("Timing stopped.\n");

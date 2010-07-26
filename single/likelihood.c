@@ -3,8 +3,13 @@
 DB_ENV *dbenv;
 char *progname;
 
-#define ALMOST_ZERO -0.00000001
-#define ALMOST_ONE   1.00000001
+#define ALMOST_ZERO -0.000000000001
+#define ALMOST_ONE   1.000000000001
+
+#ifndef LIK_WT
+#define LIK_WT 4.0
+#endif
+
 
 //double Pr_M = 1./100;
 u_int32_t records = 0;
@@ -20,8 +25,8 @@ int match_index(DB*, const DBT*, const DBT*, DBT*);
 */
 int write_csv(DB*);
 
-int triplet_correct(DBC* orig, DB* lik, DB* first, DB* second){
-    double w = 4.0;
+int triplet_correct(DBC* orig, DB* lik, DB* first, DB* second, int mode){
+    double w = LIK_WT;
     double ij, ik, jk;
     double big1_hat, big2_hat, small_hat;
     double delta = 0;
@@ -94,7 +99,7 @@ int triplet_correct(DBC* orig, DB* lik, DB* first, DB* second){
                 while(DB_NOTFOUND !=
                   prim_cur_j->pget(prim_cur_j, &dummy_key, &prim_key_j, &dummy_data, DB_NEXT_DUP)){
                     fetch_lik(lik, &cur_ij, cur_i, cur_j, &prim_key_i, &prim_key_j, &ij_key, &ij_data);
-                    if(*(double*)ij_data.data < 0.5){
+                    if((mode==HI) ? *(double*)ij_data.data < PR_T : *(double*)ij_data.data > PR_T){
                         cur_ij->close(cur_ij);
                         continue;
                     }
@@ -313,7 +318,7 @@ int clump(DBC* orig, DB* ldb, DB* first, DB* second, DB* match, DB* prim){
                     do{
                         //printf("Keys: %s, ", (char*)key_i.data);
                         //printf("Sim: %f, ", *(double*)dummy_dat.data);
-                        if(*(double*)dummy_dat.data < 0.5){
+                        if(*(double*)dummy_dat.data < PR_T){
                         //    printf("\n");
                             continue;
                         }
@@ -329,7 +334,7 @@ int clump(DBC* orig, DB* ldb, DB* first, DB* second, DB* match, DB* prim){
                             if(tagcmp((DbRecord*)data_i.data, (DbRecord*)data_j.data) > 0){
                                 apply_tag((DbRecord*)data_i.data,
                                     has_tag((DbRecord*)data_j.data));
-                                //printf("New Min: %s", has_tag((DbRecord*)data_i.data));
+                                //printf("\tNew Min: %s\n", has_tag((DbRecord*)data_i.data));
                                 changed=1;
                             }
                             free(old);
@@ -337,9 +342,12 @@ int clump(DBC* orig, DB* ldb, DB* first, DB* second, DB* match, DB* prim){
                         }
 
                         //printf("Old Invnum_N: %s, ", ((DbRecord*)data_j.data)->Invnum_N);
-                        apply_tag(((DbRecord*)data_j.data), has_tag((DbRecord*)data_i.data));
-                        prim->put(prim, NULL, &pkey_j, &data_j, 0);
-                        prim->get(prim, NULL, &pkey_j, &data_j, 0);
+                        if(tagcmp((DbRecord*)data_i.data, (DbRecord*)data_j.data)!=0){
+                            apply_tag(((DbRecord*)data_j.data), has_tag((DbRecord*)data_i.data));
+                            prim->put(prim, NULL, &pkey_j, &data_j, 0);
+                            prim->get(prim, NULL, &pkey_j, &data_j, 0);
+                            changed=1;
+                        }
                         //printf("New Invnum_N: %s\n", ((DbRecord*)data_j.data)->Invnum_N);
                         //free(pkey_j.data);
                         free(old);
@@ -404,7 +412,7 @@ int second_index(DB* sec, const DBT* key, const DBT* data, DBT* result){
 int match_index(DB* sec, const DBT* key, const DBT* data, DBT* result){
     int *match = (int*)malloc(sizeof(int));
 
-    *match = ((*(double*)(data->data)) > 0.5);
+    *match = ((*(double*)(data->data)) > PR_T);
 
     result->data = match;
     result->size = sizeof(int);

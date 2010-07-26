@@ -1,5 +1,8 @@
 #include "comp_spec.h"
 
+#define HI 0
+#define LO 1
+
 extern int compare_records(DBT *, DBT *, simprof *);
 int listcmp(const void *, const void *, size_t, int (*)(const void *, const void*, size_t), size_t, size_t, size_t);
 
@@ -15,7 +18,7 @@ int tagcmp(DbRecord*, DbRecord*);
 
 int stop_comp(DbRecord*, DbRecord*);
 
-int triplet_correct(DBC*, DB*, DB*, DB*);
+int triplet_correct(DBC*, DB*, DB*, DB*, int);
 int clump(DBC*, DB*, DB*, DB*, DB*, DB*);
 int fetch_lik(DB*, DBC**, DBC*, DBC*, DBT*, DBT*, DBT*, DBT*);
 int first_index(DB*, const DBT*, const DBT*, DBT*);

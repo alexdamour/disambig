@@ -6,7 +6,7 @@ DB_LIBS = '/usr/local/bdb/lib'
 module1 = Extension('disambig_db',
                     sources = ['py_quadprog.c'],
                     extra_objects = ['db.o','util.o','sqlite_db_local.o',
-                        'compfun.o','comp_spec.o','comp_engine.o','strcmp95.o','train.o'],
+                        'compfun.o','extractfun.o','comp_spec.o','comp_engine.o','strcmp95.o','train.o'],
                     include_dirs = ['.',
                         DB_INCLUDE,
                         '/usr/include'],

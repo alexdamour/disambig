@@ -3,12 +3,21 @@
 /*
  * Globals
  */
+#ifndef PR_M
+#define PR_M 0.05
+#endif
+
+#ifndef PR_T
+#define PR_T 0.5
+#endif
+
+#define DEBUG 1
 
 DB_ENV	 *dbenv;			/* Database environment */
 DB	 *db;				/* Primary database */
 int	  verbose;			/* Program verbosity */
 char	 *progname;			/* Program name */
-double Pr_M = 1./100;
+double Pr_M=0.;
 
 //char* on_blocks[] = {"J.SMITH", "D.MORRIS", "J.LEE", NULL};
 
@@ -18,7 +27,8 @@ int main(int argc, char** argv){
     clock_t start, end, block_start, block_end;
     char ch;
     int big_block = 0;
-    int ret, i, freeme, done;
+    int ret, i, freeme, done, first_time;
+    int one=1;
     int custom_block = 0;
     u_int32_t block_num = 0;
     u_int32_t trip = 0;
@@ -32,18 +42,19 @@ int main(int argc, char** argv){
 
     void* multp;
 
-    u_int32_t matches, num_comps;
+    u_int32_t matches, num_comps, total_matches = 0;
 
     simprof sp;
     char* spkey_buf, **my_block;
     DB_BTREE_STAT *stat;
 
-    DB  *db, *block_db, *sp_db, *rdb, *ldb, *first, *second, *match;
-    DBC *cur, *cur_i, *cur_j, *r_cur, *tri_cur, *tag_cur, *ldb_cur;
+    DB  *db, *block_db, *sp_db, *rdb, *ldb, *first, *second, *match, *lfreq;
+    DBC *cur, *tmp_cur, *cur_i, *cur_j, *r_cur, *tri_cur, *tag_cur, *ldb_cur;
     DBT data_i, key_i, pkey_i;
     DBT data_j, key_j, pkey_j;
     DBT data_sp, key_sp;
     DBT key_lik, data_lik;
+    DBT lik_val, lik_cnt;
 
     memset(&data_i, 0, sizeof(data_i));
     memset(&key_i, 0, sizeof(data_i));
@@ -58,11 +69,18 @@ int main(int argc, char** argv){
 
     DBT_CLEAR(key_lik);
     DBT_CLEAR(data_lik);
+
+    DBT_CLEAR(lik_val);
+    DBT_CLEAR(lik_cnt);
     
     sqlite_db_env_open(NULL);
     sqlite_db_primary_open(&db, "primary", DB_BTREE, 32*1024, 0, 0, compare_uint32);
     sqlite_db_secondary_open(db, &block_db, "block_idx", 8*1024, DB_DUPSORT, blocking_callback, compare_uint32);
     sqlite_db_primary_open(&rdb, "ratios", DB_BTREE, 4*1024, 0, 0, NULL);
+    if(DEBUG){
+        ret = sqlite_db_primary_open(&lfreq, "lik_freq", DB_BTREE, 4*1024, DB_CREATE, 0, NULL);
+        printf("ret: %d\n", ret);
+    }
 
     ret = db->cursor(db, NULL, &cur, 0);
     ret = block_db->cursor(block_db, NULL, &cur_i, 0);
@@ -129,6 +147,9 @@ int main(int argc, char** argv){
         i=1;
     }
 
+    /* Initialize the comparison environment. */
+    comp_env_init();
+
     while(DB_NOTFOUND !=
       cur_i->pget(cur_i, &key_i, &pkey_i, &data_i,
                   (custom_block ? DB_SET : DB_NEXT_NODUP))){//block loop 
@@ -151,12 +172,17 @@ int main(int argc, char** argv){
             continue;
         }
 
-        Pr_M = MIN(1/10., 100/((double)dup_count));
+        Pr_M = MIN(PR_M, 100/((double)dup_count));
 
-        if(!(++block_num % 10000)/*|| (block_num < 1000 && !(block_num % 10))*/) {
+        if(!(++block_num % 10000) || (block_num < 1000 && !(block_num % 10))) {
             db->sync(db, 0);
             dbenv->memp_sync(dbenv, NULL);
-            printf("%lu blocks processed with %lu needing triplet correction...\n", (ulong)block_num, (ulong)trip);
+            //Reinitialize cursor to clear cursor cache
+            cur_i->dup(cur_i, &tmp_cur, DB_POSITION);
+            tmp_cur->pget(tmp_cur, &key_i, &pkey_i, &data_i, DB_CURRENT);
+            cur_i->close(cur_i);
+            cur_i = tmp_cur;
+            printf("%lu blocks processed with %lu needing triplet correction and %lu matches...\n", (ulong)block_num, (ulong)trip, (ulong)total_matches);
             
         }
         if(strncmp(((DbRecord *)data_i.data)->Invnum_N, "\0", 1)){
@@ -172,6 +198,7 @@ int main(int argc, char** argv){
         }
         //else printf("Blocks previously processed: %lu\n", (ulong)block_num); 
         done = 0;
+        first_time=1;
 
         while(!done){
             cur_i->pget(cur_i, &key_i, &pkey_i, &data_i, DB_SET);
@@ -225,28 +252,48 @@ int main(int argc, char** argv){
                             simprof_dump((simprof*)key_lik.data);
                         }
                         likelihood = 1/(1+(1-Pr_M)/(Pr_M*(*(double*)(data_lik.data))));
-                        if(likelihood > 0.5) ++matches;
-/*
-                        if((0==strcmp(((DbRecord*)data_i.data)->Firstname, "LAWRENCE T")) ||
-                           (0==strcmp(((DbRecord*)data_j.data)->Firstname, "LAWRENCE T"))){
-                            printf("=====================\n");
-                            DbRecord_dump((DbRecord*)data_i.data);
-                            DbRecord_dump((DbRecord*)data_j.data);
-                            simprof_dump(&sp);
-                            printf("likelihood: %g\n", likelihood);
+
+                        /*DEBUGGING ONLY*/
+                        if(DEBUG && first_time){
+                            lik_val.data = &likelihood;
+                            lik_val.size = sizeof(double);
+                            if(DB_NOTFOUND == lfreq->get(lfreq, NULL, &lik_val, &lik_cnt, 0)){
+                                lik_cnt.data = &(one);
+                                lik_cnt.size = sizeof(int);
+                            }
+                            else{
+                                *((int*)lik_cnt.data)+=1;
+                                lik_cnt.size = sizeof(int);
+                            }
+                            lfreq->put(lfreq, NULL, &lik_val, &lik_cnt, 0);
                         }
-*/
+                        /*END DEBUGGING ONLY*/
+                        
+                        if(likelihood > PR_T){
+                            ++matches;
+                        }
+                            
+                            /*if(strcmp(((DbRecord*)data_i.data)->Invnum,"04933465-2")==0 ||
+                                strcmp(((DbRecord*)data_j.data)->Invnum,"04933465-2")==0){*/
+                        
+                            if(custom_block && likelihood > PR_T &&
+                                    (strcmp(((DbRecord*)data_i.data)->Invnum, "D0571716-0")==0 ||
+                                    strcmp(((DbRecord*)data_j.data)->Invnum, "D0571716-0")==0))
+                            {
+                                DbRecord_dump((DbRecord*)data_i.data);
+                                DbRecord_dump((DbRecord*)data_j.data);
+                                
+                                simprof_dump(&sp);
+                                printf("likelihood: %g\n\n", likelihood);
+                            }
+                            
+                            
+                        //}
                     }
-                    else
+                    else{
                         likelihood = 0;
-                    /*
-                    if((!strncmp(((DbRecord*)data_i.data)->Firstname, "DAVID", 10) || !strncmp(((DbRecord*)data_j.data)->Firstname, "DAVID", 10)) && likelihood > 0.5){
-                        DbRecord_dump((DbRecord*)data_i.data);
-                        DbRecord_dump((DbRecord*)data_j.data);
-                        printf("likelihood: %g\n", likelihood);
-                        printf("ratio: %g\n", *(double*)data_lik.data);
                     }
-                    */
+
                     data_lik.data = &likelihood;
                     data_lik.size = sizeof(double);
          
@@ -257,9 +304,10 @@ int main(int argc, char** argv){
                 cur_j->close(cur_j);
             } while(DB_NOTFOUND !=
                 cur_i->pget(cur_i, &key_i, &pkey_i, &data_i, DB_NEXT_DUP));
+            first_time=0;
             num_comps = (dup_count*(dup_count-1))/2;
             //printf("matches: %lu\n", (u_long)matches);
-            if(num_comps != 0 && fabs(((double)(Pr_M*num_comps-matches))/((double)matches)) > 0.001){
+            if(dup_count > 15 && num_comps != 0 && fabs(((double)(Pr_M*num_comps-matches))/((double)matches)) > 0.001){
                 if(custom_block)
                     printf("Pr_M: %g, Emp: %g\n", Pr_M, (double)matches/(double)num_comps);
                 Pr_M = (double)matches/(double)num_comps;//(double)matches/(double)dup_count;
@@ -270,9 +318,12 @@ int main(int argc, char** argv){
                 done = 1;
             }
 
-            if(done && fabs((double)matches/(double)num_comps-1) > 0.0000001){
-                ret = triplet_correct(tri_cur, ldb, first, second);
+            if(TRIPLET_ON && done && fabs((double)matches/(double)num_comps-1) > 0.00000001 && matches > 0){
+                //printf("Mode: %d\n", ((double)matches/(double)num_comps) < 0.5 ? HI : LO);
+                ret = triplet_correct(tri_cur, ldb, first, second,
+                        ((double)matches/(double)num_comps) < 0.5 ? HI : LO);
                 tri_cur->close(tri_cur);
+                total_matches += matches;
                 ++trip;
             }
             //sqlite_db_secondary_open(ldb, &match, "match_idx", 8*1024, DB_DUPSORT, match_index, NULL);
@@ -323,53 +374,16 @@ int main(int argc, char** argv){
             break;
     }
     free(spkey_buf);
-/*
-    printf("fname: %d\n", sp.fname);
-    printf("street: %d\n", sp.street);
-    printf("city: %d\n", sp.city);
-    printf("state: %d\n", sp.state);
-    printf("country: %d\n", sp.country);
-    printf("zipcode: %d\n", sp.zipcode);
-    printf("dist: %d\n", sp.dist);
-    printf("asg: %d\n", sp.asg);
-    printf("firm: %d\n", sp.firm);
-*/
+
+    /*Clean up the comparison environment. */
+    comp_env_clean();
+
     end = clock();
 
     //ldb->stat_print(ldb, DB_STAT_ALL);
     printf("CPU TIME: %f\n", ((double) (end-start))/CLOCKS_PER_SEC);
 
     //sp_db->cursor(sp_db, NULL, &cur, 0);
-
-/* 
-    key_i.data = "6980-822118";
-    key_i.size = 11;
-
-    if(cur->get(cur, &key_i, &data_i, DB_SET)==0){
-    printf("fname: %d\n", ((simprof*)data_i.data)->fname);
-    printf("street: %d\n", ((simprof*)data_i.data)->street);
-    printf("city: %d\n", ((simprof*)data_i.data)->city);
-    printf("state: %d\n", ((simprof*)data_i.data)->state);
-    printf("country: %d\n", ((simprof*)data_i.data)->country);
-    printf("zipcode: %d\n", ((simprof*)data_i.data)->zipcode);
-    printf("dist: %d\n", ((simprof*)data_i.data)->dist);
-    printf("asg: %d\n", ((simprof*)data_i.data)->asg);
-    printf("firm: %d\n", ((simprof*)data_i.data)->firm);}
-
-    key_i.data = "6980-802165";
-    key_i.size = 11;
-
-    if(cur->get(cur, &key_i, &data_i, DB_SET)==0){
-    printf("fname: %d\n", ((simprof*)data_i.data)->fname);
-    printf("street: %d\n", ((simprof*)data_i.data)->street);
-    printf("city: %d\n", ((simprof*)data_i.data)->city);
-    printf("state: %d\n", ((simprof*)data_i.data)->state);
-    printf("country: %d\n", ((simprof*)data_i.data)->country);
-    printf("zipcode: %d\n", ((simprof*)data_i.data)->zipcode);
-    printf("dist: %d\n", ((simprof*)data_i.data)->dist);
-    printf("asg: %d\n", ((simprof*)data_i.data)->asg);
-    printf("firm: %d\n", ((simprof*)data_i.data)->firm);}
-*/
 
     //cur->close(cur);
     cur_i->close(cur_i); 
@@ -380,6 +394,8 @@ int main(int argc, char** argv){
     //first->close(first, 0);
     //second->close(second, 0);
     //ldb->close(ldb, 0);
+    if(DEBUG)
+        lfreq->close(lfreq,0);
     block_db->close(block_db, 0);
     db->close(db,0);
     dbenv->close(dbenv,0);

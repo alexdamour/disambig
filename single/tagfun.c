@@ -11,7 +11,7 @@ int apply_tag(DbRecord *data, char *tagp){
     //char invnum_buf[16];
     if(tagp == NULL){
         //memset(invnum_buf, '\0', 16);
-        //sprintf(invnum_buf, "%s-%lu", data->Patent, (u_long)data->InvSeq);
+        //printf("%s", data->Invnum);
         memcpy(data->Invnum_N, data->Invnum, 16);
     }
     else

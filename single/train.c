@@ -7,29 +7,25 @@
 #include "train.h"
 
 char* matchset_names[] = {
-	"tset02_F_2",
-	"tset05_F_2",
+	"tset02_F",
+	"tset05_F",
 	NULL,
 };
 
 char *nonmatchset_names[] = {
-	"xset01_F_2",
-	"xset03_F_2",
+	"xset01_F",
+	"xset03_F",
 	NULL,
 };
 
 char *idx_names[] = {
 	"name",
-	"loc",
 	"other",
-	"coauths",
 };
 
 int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*) = {
 	name_idx_callback,
-	loc_idx_callback,
 	other_idx_callback,
-	coauths_idx_callback,
 };
 
 int name_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
@@ -45,37 +41,16 @@ int name_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
 	return(0);
 }
 
-int loc_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
-	sec = sec;
-	data = data;
-	int* fields = malloc(sizeof(int)*2);
-	fields[0] = ((simprof*)key->data)->dist;
-	fields[1] = ((simprof*)key->data)->dt;
-	result->data = fields;
-	result->size = sizeof(int)*2;
-	result->flags = result->flags | DB_DBT_APPMALLOC;
-	return(0);
-}
-
 int other_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
 	sec = sec;
 	data = data;
-	int* fields = malloc(sizeof(int)*2);
-	fields[0] = ((simprof*)key->data)->asg;
-	fields[1] = ((simprof*)key->data)->cl;
+	int* fields = malloc(sizeof(int)*4);
+	fields[0] = ((simprof*)key->data)->dist;
+	fields[1] = ((simprof*)key->data)->asg;
+	fields[2] = ((simprof*)key->data)->cl;
+	fields[3] = ((simprof*)key->data)->coauths;
 	result->data = fields;
-	result->size = sizeof(int)*2;
-	result->flags = result->flags | DB_DBT_APPMALLOC;
-	return(0);
-}
-
-int coauths_idx_callback(DB* sec, const DBT* key, const DBT* data, DBT* result){
-	sec = sec;
-	data = data;
-	int* fields = malloc(sizeof(int)*1);
-	fields[0] = ((simprof*)key->data)->coauths;
-	result->data = fields;
-	result->size = sizeof(int)*1;
+	result->size = sizeof(int)*4;
 	result->flags = result->flags | DB_DBT_APPMALLOC;
 	return(0);
 }

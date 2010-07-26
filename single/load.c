@@ -59,13 +59,14 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
         memcpy(&recordp, &DbRecord_base, sizeof(DbRecord));
         build_record(ppStmt, &recordp, &w);
         DbRecord_write(&recordp, db, &w);
-        if((count++ % 1000000)==0){
+        if((count++ % 100000)==0){
             printf("%lu records processed...\n", (ulong)count);
             db->sync(db, 0);
         }
     }
     count = 0;
     sqlite3_finalize(ppStmt);
+    
 
     db->cursor(db, NULL, &cursor, 0);
     cursor->get(cursor, &(w.key), &(w.data), DB_LAST);
@@ -95,6 +96,7 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
     
     count_blocks(sdb);
     sdb->close(sdb, 0);
+    
 
     sqlite_db_secondary_open(db, &sdb, "idx", 8*1024, 0, index_callback, NULL);
     ret = sdb->stat(sdb, NULL, &stat, 0);
@@ -102,7 +104,6 @@ int input_load(DB *db, sqlite3* sql_db, char* sql_table){
     printf("idx_keys: %lu\n", (u_long)(stat->bt_nkeys));
     free(stat);
     sdb->close(sdb, 0);
-    
     
     return(0);
 }

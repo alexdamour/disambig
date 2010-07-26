@@ -14,15 +14,17 @@ SRCS=	sqlite_db_code.c sqlite_db_local.c db.c util.c \
     blockfun.c \
     indexfun.c \
     sp_code.c \
-    compfun.c comp_spec.c comp_engine.c comp_engine_main.c\
+    extractfun.c \
+    compfun.c comp_spec.c comp_env.c comp_engine.c comp_engine_main.c\
     strcmp95.c \
     train_main.c train.c\
     likelihood.c\
+    asg_freq_hash_load.c\
     dump_primary.c\
     clear_tags.c\
     #DbRecord.c 
 
-all: sqlite_db_load comp_engine train dump clear #sqlite_db_load_multi #multi_test
+all: sqlite_db_load comp_engine train dump clear python #sqlite_db_load_multi #multi_test
  #likelihood
  #db_block csv_query
 
@@ -50,24 +52,28 @@ SP_OBJS=sqlite_db_local.o util.o blockfun.o indexfun.o db.o load.o
 sp_code: sp_code.o
 	$(CC) -o $@ $? $(LIBS)
 
-COMP_OBJS=sqlite_db_local.o compfun.o comp_spec.o comp_engine.o comp_engine_main.o likelihood.o blockfun.o db.o util.o strcmp95.o tagfun.o stopfun.o
+COMP_OBJS=sqlite_db_local.o compfun.o extractfun.o comp_spec.o comp_env.o comp_engine.o comp_engine_main.o likelihood.o blockfun.o db.o util.o strcmp95.o tagfun.o stopfun.o
 comp_engine: $(COMP_OBJS) sqlite_db_load 
 	$(CC) -o $@ $(COMP_OBJS) $(LIBS)
 
-TRAIN_OBJS=sqlite_db_local.o db.o util.o train.o train_main.o compfun.o comp_engine.o comp_spec.o strcmp95.o indexfun.o
+TRAIN_OBJS=sqlite_db_local.o db.o util.o train.o train_main.o compfun.o comp_env.o extractfun.o comp_engine.o comp_spec.o strcmp95.o indexfun.o
 train: $(TRAIN_OBJS)
 	$(CC) -o $@ $(TRAIN_OBJS) $(LIBS)
 
-DUMP_OBJS=sqlite_db_local.o db.o util.o dump_primary.o blockfun.o
+DUMP_OBJS=sqlite_db_local.o db.o util.o dump_primary.o blockfun.o tagfun.o indexfun.o
 dump: $(DUMP_OBJS)
 	$(CC) -o $@ $(DUMP_OBJS) $(LIBS)
+
+ASG_OBJS =sqlite_db_local.o db.o util.o asg_freq_hash_load.o
+asg: $(ASG_OBJS)
+	$(CC) -o $@ $(ASG_OBJS) $(LIBS)
 
 CLEAR_OBJS=sqlite_db_local.o db.o util.o clear_tags.o tagfun.o
 clear: $(CLEAR_OBJS)
 	$(CC) -o $@ $(CLEAR_OBJS) $(LIBS)
 
 clean distclean realclean:
-	rm -rf $(PROGS) TESTDIR eBay tags *.o *.core sqlite_db_local.[ch] #primary block_idx idx simprof tset0* xset0*
+	rm -rf $(PROGS) TESTDIR eBay tags *.o *.core sqlite_db_local.[ch] build #primary block_idx idx simprof tset0* xset0*
 
 primaryclean:
 	rm -rf primary block_idx idx
@@ -81,10 +87,13 @@ tsetclean:
 ratioclean:
 	rm ratios
 
+asgclean:
+	rm asg_freq_hash
+
 backup:
 	cp -r *.c *.h *.py build Makefile ../multi 
 
-python: py_quadprog.c train.h train.c train.o
+python: py_quadprog.c train.h train.c train.o extractfun.o
 	python setup.py build
 	sudo python setup.py install 
 
@@ -101,7 +110,7 @@ train.o: comp_engine.o comp_spec.o db.o sqlite_db.h
 
 query_main.o util.o blockfun.o create_secondary.o: sqlite_db_local.h sqlite_db.h
 
-comp_engine.o comp_spec.o: sqlite_db_local.h sqlite_db.h strcmp95.h comp_spec.h likelihood.o tagfun.o stopfun.o
+likelihood.o comp_engine_main.o comp_engine.o comp_spec.o: sqlite_db_local.h sqlite_db.h strcmp95.h comp_spec.h likelihood.o tagfun.o stopfun.o comp_spec.c comp_spec.h
 
 sqlite_db_local.c sqlite_db_local.h: sqlite_db_code data.desc
 	./sqlite_db_code -v -c sqlite_db_local.c -h sqlite_db_local.h -f data.desc

@@ -26,6 +26,13 @@ int compare_records(DBT *rec1, DBT *rec2, simprof *sp){
         else
             *(int*)((char*)sp+sp_offsets[i]) = cfunc(arg1, arg2, sz);
 //        printf("\tfinal_res: %d\n", *(int*)((char*)sp+sp_offsets[i]));
+        /*
+        if(sp->fname < 4){
+            DbRecord_dump((DbRecord*)rec1->data);
+            DbRecord_dump((DbRecord*)rec2->data);
+            simprof_dump(sp);
+        }
+        */
         if(freeme){
             free(arg1); 
             free(arg2);

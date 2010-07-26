@@ -2,7 +2,9 @@
 #include "strcmp95.h"
 
 #define TRIPLET_ON 1 
-#define LIK_CUTOFF 0.95
+#define PR_M 0.33
+#define PR_T 0.95
+#define LIK_WT 4.0
 
 #define LATLON SQLITE_DB_NUMFIELDS
 #define ASG_FIELDS  SQLITE_DB_NUMFIELDS+1
@@ -10,6 +12,7 @@
 typedef struct {
     double lat;
     double lon;
+    char* street;
 } latlon;
 
 typedef struct {
@@ -19,9 +22,9 @@ typedef struct {
 
 res_space{
 %   type        levels
-    jwres       JWSUB33,JWMISSING,JW66,JW100,JW100MULT,JW100MULTFULL
-    distres     DIST100PLUS,DISTMISSING,DIST100,DIST75,DIST50,DIST10,DIST0
-    disttype    NO_STREET,HAVE_STREET
+    jwres       JWSUB33,JWMISSING,JW33,JW66,JW100,JW100MULT,JW100MULTFULL
+    asgres      ASGSUB33,ASGMISSING,ASG33,ASG66,ASG100,ASG100MULT,ASGNUM,ASGNUMMED,ASGNUMSMALL
+    distres     DIST100PLUS,DISTMISSING,DIST100,DIST75,DIST50,DIST10NOST,DIST10ST,DIST0ST
     classres    CLASS0,CLASSMISS,CLASS25,CLASS50,CLASS75PLUS
     coauthres   C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10
     midnameres  M0,MMISSING,M33,M67,M100
@@ -32,28 +35,25 @@ simprof{
     jwres       fname   jwcmp       SQLITE_DB_INDX_FIRSTNAME    name       
     midnameres  midname midnamecmp  SQLITE_DB_INDX_FIRSTNAME    name
     jwres       lname   jwcmp       SQLITE_DB_INDX_LASTNAME     name
-    distres     dist    distcmp     LATLON                      loc
-    disttype    dt      disttypecmp SQLITE_DB_INDX_COUNTRY      loc
-    jwres       asg     asgcmp      ASG_FIELDS                  other
-    classres    cl      classcmp    SQLITE_DB_INDX_CLASS        other
-    coauthres   coauths coauthcmp   SQLITE_DB_INDX_COAUTHS      coauths
+    distres     dist    distcmp     LATLON                      other
+    asgres      asg     asgcmp      ASG_FIELDS                  other
+    coauthres    cl      classcmp    SQLITE_DB_INDX_CLASS        other
+    coauthres    coauths coauthcmp   SQLITE_DB_INDX_COAUTHS      other 
 }
 
 match_sets{
-%    tset01_F_2
-    tset02_F_2
-    tset05_F_2
+%    tset01_F
+    tset02_F
+    tset05_F
 }
 
 nonmatch_sets{
-    xset01_F_2
-    xset03_F_2
+    xset01_F
+    xset03_F
 }
 
 training{
-%   group       match_sets                           nonmatch_sets
-    name        tset05_F_2                xset01_F_2
-    loc         tset02_F_2,tset05_F_2                xset03_F_2
-    other       tset02_F_2,tset05_F_2     xset01_F_2,xset03_F_2
-    coauths     tset02_F_2                xset01_F_2,xset03_F_2
+%   group       match_sets                nonmatch_sets
+    name        tset05_F                  xset01_F
+    other       tset02_F                  xset03_F
 }

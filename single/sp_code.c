@@ -668,6 +668,9 @@ code_header(){
     fprintf(hfp, "\n");
 
     fprintf(hfp, "/* Custom function prototypes. */\n");
+    fprintf(hfp, "/* Comparion environment functions. */\n");
+    fprintf(hfp, "int comp_env_init(void);");
+    fprintf(hfp, "int comp_env_clean(void);");
     fprintf(hfp, "/* Extractor function. */\n");
     fprintf(hfp, "int extract(DbRecord*, const int, void**, size_t*, int*, size_t*, size_t*);\n");
     fprintf(hfp, "/* Comparison functions. */\n");

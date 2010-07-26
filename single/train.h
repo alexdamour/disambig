@@ -7,11 +7,9 @@
 #include "comp_engine.h"
 
 extern int name_idx_callback(DB*, const DBT*, const DBT*, DBT*);
-extern int loc_idx_callback(DB*, const DBT*, const DBT*, DBT*);
 extern int other_idx_callback(DB*, const DBT*, const DBT*, DBT*);
-extern int coauths_idx_callback(DB*, const DBT*, const DBT*, DBT*);
 
-#define NUM_IDXS 4
+#define NUM_IDXS 2
 char* idx_names[];
 
 int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*);

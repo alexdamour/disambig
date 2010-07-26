@@ -82,7 +82,7 @@ def raw_ratios(support):
     x_dict = {}
 
     for t in range(len(tsets)):
-        print t
+#        print t
         tset_dicts.append(raw_counts(tsets[t], t_idx[t], supports.index(support), prof_maxes[support]))
         #print len(tset_dicts[t].keys())
         s1 = set(tuples)
@@ -91,7 +91,7 @@ def raw_ratios(support):
         #print sum([v for k,v in tset_dicts[t].iteritems()])
         #seen.extend(tset_dicts[t].keys())
 
-        #print tset_dicts[t]
+#        print tset_dicts[t]
 #    print tuples
     #print tset_dicts
     total = 0
@@ -100,8 +100,8 @@ def raw_ratios(support):
     i = 0
     for td in tset_dicts:
         top_counts = [(k,v) for k,v in td.iteritems() if v > 0]
-        top_counts.sort(reverse=True)
-        #print top_counts[0:100]
+        top_counts.sort(key=lambda x: x[1], reverse=True)
+        print top_counts[0:300]
         for k in td.keys():#tuples:
             if t_dict.has_key(k):
                 t_dict[k] += td[k]
@@ -117,6 +117,7 @@ def raw_ratios(support):
     #print len(seen)
 
     #print total
+######################################
 
     s = set()
     s = s.union(*[t.keys() for t in tset_dicts])
@@ -131,6 +132,7 @@ def raw_ratios(support):
 
     for x in range(len(xsets)):
         xset_dicts.append(raw_counts(xsets[x], x_idx[x], supports.index(support), prof_maxes[support]))
+#        print [(k, v) for k,v in xset_dicts[x].iteritems() if k[1] >= 7]
 
     for t in tuples:
         for d in range(len(xset_dicts)):
@@ -144,9 +146,9 @@ def raw_ratios(support):
 
     del xset_dicts
 
-    debug_keys = t_dict.keys()
+    debug_keys = x_dict.keys()
     debug_keys.sort()
-#    print [(x, t_dict[x]) for x in debug_keys] 
+#print [(x, x_dict[x]) for x in debug_keys] 
     t_T = sum(t_dict.values())     
     #t_T = t_T and 1 or t_T
     print "t_T: %d"%t_T
@@ -154,7 +156,11 @@ def raw_ratios(support):
     #x_T = x_T and 1 or x_T
     print "x_T: %d"%x_T
 
+#    f = open("ratios.txt",'w')
+#    f.write('\n'.join(["%s: %g, %g"%(str(t), t_dict[t]/float(t_T), x_dict[t]/float(x_T)) for t in tuples if t[1]>=7]))
+#    f.close()
     ratios = [(t_dict[t]/float(t_T))/(x_dict[t]/float(x_T)) for t in tuples]
+#    print ratios
     weights = [x_dict[t] + t_dict[t] for t in tuples]
 #    print tuples
     return (weights, ratios)
@@ -295,10 +301,10 @@ def smooth_ratios(support=supports):
 
         #objfun = objective_factory(len(in_hull), init, w, P, q)
         #print objfun.args
-        if s == "dist":
-            r = r_bar
-            t = in_hull 
-            #print q
+#if s == "loc":#"dist":
+        r = r_bar
+        t = in_hull 
+        #print q
         G = G_mat(in_hull)
         f = open("G_file.p", 'w')
         pickle.dump(G, f)
@@ -320,12 +326,14 @@ def smooth_ratios(support=supports):
         ratio_dicts.append(dict(zip(in_hull, list(sol['x']))))
 
 #    print w
-    #print r
+#    print r
 #    r2 = [2929666.7390237185, 0.70787580866602073, 0.1314312027126355, 0.015006581860636961, 0.005, 0.0045703943247474149]
-    #print r2
+#print rg
 #    print ratio_dicts[0]
-    #d = [(tup, ratio_dicts[0][tup]) for tup in t]
-    #print d
+#d = [(tup, r[i], ratio_dicts[0][tup]) for i,tup in enumerate(t) if tup[1]>=6]
+#    f = open("ratioChange.txt",'w')
+#    f.write('\n'.join(["%s: %g -> %g"%(str(l[0]), l[1], l[2]) for l in d]))
+#    f.close()
 
     full_tuples = [x for x in product(*tuple_lists)]
     return dict([(flatten(t),
