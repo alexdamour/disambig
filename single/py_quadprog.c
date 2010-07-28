@@ -10,8 +10,14 @@ int verbose;
 char *progname;
 
 //From comp_spec.h
-size_t sp_offsets[];
-int num_comps;
+extern size_t sp_offsets[];
+extern int num_comps;
+
+//From train.h
+extern char* idx_names[];
+extern int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*);
+extern char* matchset_names[];
+extern char* nonmatchset_names[];
 
 static PyObject *raw_count_table(PyObject *, PyObject *);
 static PyObject *write_ratio_db(PyObject *, PyObject *);

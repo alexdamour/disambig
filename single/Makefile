@@ -110,7 +110,9 @@ train.o: comp_engine.o comp_spec.o db.o sqlite_db.h
 
 query_main.o util.o blockfun.o create_secondary.o: sqlite_db_local.h sqlite_db.h
 
-likelihood.o comp_engine_main.o comp_engine.o comp_spec.o: sqlite_db_local.h sqlite_db.h strcmp95.h comp_spec.h likelihood.o tagfun.o stopfun.o comp_spec.c comp_spec.h
+comp_engine_main.o comp_engine.o comp_spec.o: sqlite_db_local.h sqlite_db.h strcmp95.h comp_spec.h likelihood.o tagfun.o stopfun.o comp_spec.c comp_spec.h
+
+likelihood.o: sqlite_db_local.h sqlite_db.h strcmp95.h comp_spec.h tagfun.o stopfun.o comp_spec.c comp_spec.h
 
 sqlite_db_local.c sqlite_db_local.h: sqlite_db_code data.desc
 	./sqlite_db_code -v -c sqlite_db_local.c -h sqlite_db_local.h -f data.desc

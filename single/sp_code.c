@@ -538,11 +538,11 @@ tr_code_header(){
     fprintf(trhfp, "\n");
 
     fprintf(trhfp, "#define NUM_IDXS %d\n", train_field_cnt);
-    fprintf(trhfp, "char* idx_names[];\n\n");
-    fprintf(trhfp, "int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*);\n\n");
+    fprintf(trhfp, "extern char* idx_names[];\n\n");
+    fprintf(trhfp, "extern int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*);\n\n");
 
-    fprintf(trhfp, "char* matchset_names[];");
-    fprintf(trhfp, "char* nonmatchset_names[];");
+    fprintf(trhfp, "extern char* matchset_names[];\n");
+    fprintf(trhfp, "extern char* nonmatchset_names[];");
 
         return 0;
 }
@@ -662,9 +662,9 @@ code_header(){
     fprintf(hfp, "\n");
 
     fprintf(hfp, "/* Comparison specific globals. */\n");
-    fprintf(hfp, "int (*comp_funcs[])(const void*, const void*, size_t);\n");
-    fprintf(hfp, "int extract_idxs[];\n");
-    fprintf(hfp, "size_t sp_offsets[];\n");
+    fprintf(hfp, "extern int (*comp_funcs[])(const void*, const void*, size_t);\n");
+    fprintf(hfp, "extern int extract_idxs[];\n");
+    fprintf(hfp, "extern size_t sp_offsets[];\n");
     fprintf(hfp, "\n");
 
     fprintf(hfp, "/* Custom function prototypes. */\n");

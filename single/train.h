@@ -10,8 +10,9 @@ extern int name_idx_callback(DB*, const DBT*, const DBT*, DBT*);
 extern int other_idx_callback(DB*, const DBT*, const DBT*, DBT*);
 
 #define NUM_IDXS 2
-char* idx_names[];
+extern char* idx_names[];
 
-int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*);
+extern int(*idx_funcs[])(DB*, const DBT*, const DBT*, DBT*);
 
-char* matchset_names[];char* nonmatchset_names[];
+extern char* matchset_names[];
+extern char* nonmatchset_names[];

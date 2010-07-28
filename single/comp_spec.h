@@ -58,9 +58,9 @@ typedef struct __simprof {
 } simprof;
 
 /* Comparison specific globals. */
-int (*comp_funcs[])(const void*, const void*, size_t);
-int extract_idxs[];
-size_t sp_offsets[];
+extern int (*comp_funcs[])(const void*, const void*, size_t);
+extern int extract_idxs[];
+extern size_t sp_offsets[];
 
 /* Custom function prototypes. */
 /* Comparion environment functions. */
