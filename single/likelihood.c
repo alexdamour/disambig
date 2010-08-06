@@ -410,6 +410,12 @@ int analyze(DB* ldb, DB* primary){
     lcur->close(lcur);
     pcur1->close(pcur1);
     pcur2->close(pcur2);
+
+    //open likelihood database
+    //create block tag, PR_M, PR_T stuct
+    //create stat struct
+    //write key-data pair to bdb
+    //later on, index the database by block, Pr_M, and Pr_T
 	
 	printf("density: %g, precision: %g of %lu, recall: %g of %lu\n", (match_n+nonmatch_n)/(match_d+nonmatch_d), match_n/match_d, match_d, 1-nonmatch_n/nonmatch_d, nonmatch_d);
 	return(0);
