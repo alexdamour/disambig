@@ -57,7 +57,7 @@ int main(int argc, char** argv){
     char* spkey_buf, **my_block;
     DB_BTREE_STAT *stat;
 
-    DB  *db, *block_db, *sp_db, *rdb, *ldb, *first, *second, *match, *lfreq;
+    DB  *db, *block_db, *stat_db, *sp_db, *rdb, *ldb, *first, *second, *lfreq, *match;
     DBC *cur, *tmp_cur, *cur_i, *cur_j, *r_cur, *tri_cur, *tag_cur, *ldb_cur;
     DBT data_i, key_i, pkey_i;
     DBT data_j, key_j, pkey_j;
@@ -86,6 +86,7 @@ int main(int argc, char** argv){
     sqlite_db_primary_open(&db, "primary", DB_BTREE, 32*1024, 0, 0, compare_uint32);
     sqlite_db_secondary_open(db, &block_db, "block_idx", 8*1024, DB_DUPSORT, blocking_callback, compare_uint32);
     sqlite_db_primary_open(&rdb, "ratios", DB_BTREE, 4*1024, 0, 0, NULL);
+    sqlite_db_primary_open(&stat_db, "stat_db", DB_BTREE, 32*1024, DB_CREATE, 0, NULL);
     if(DEBUG){
         ret = sqlite_db_primary_open(&lfreq, "lik_freq", DB_BTREE, 4*1024, DB_CREATE, 0, NULL);
         printf("ret: %d\n", ret);
@@ -358,7 +359,7 @@ int main(int argc, char** argv){
     //        free(stat);
             if(done){
                 clump(tag_cur, ldb, first, second, match, db);
-                analyze(ldb, db);
+                analyze(stat_db, &key_i, ldb, db);
                 tag_cur->close(tag_cur);
             }
             //match->close(match,0);
@@ -407,6 +408,7 @@ int main(int argc, char** argv){
     //ldb->close(ldb, 0);
     if(DEBUG)
         lfreq->close(lfreq,0);
+    stat_db->close(stat_db, 0);
     block_db->close(block_db, 0);
     db->close(db,0);
     dbenv->close(dbenv,0);
