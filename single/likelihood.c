@@ -23,6 +23,10 @@ int first_index(DB*, const DBT*, const DBT*, DBT*);
 int second_index(DB*, const DBT*, const DBT*, DBT*);
 int match_index(DB*, const DBT*, const DBT*, DBT*);
 */
+
+/* Global DB_ENV */
+DB_ENV	 *dbenv;
+
 int write_csv(DB*);
 
 int triplet_correct(DBC* orig, DB* lik, DB* first, DB* second, int mode){
@@ -362,11 +366,13 @@ int clump(DBC* orig, DB* ldb, DB* first, DB* second, DB* match, DB* prim){
     return(0);
 }
 
-int analyze(DB* ldb, DB* primary){
+int analyze(DB* stat_db, DBT* block_dbt, DB* ldb, DB* primary){
 	DBT lkey, lval;
 	DBT first_pkey, second_pkey;
 	DBT rec1, rec2;
+    DBT sd_dbt, sk_dbt;
 	DBC* lcur, *pcur1, *pcur2;
+    stat_data sd;
     void *old1, *old2;
 	double match_n, nonmatch_n;
 	u_int32_t match_d, nonmatch_d, all;
@@ -379,6 +385,8 @@ int analyze(DB* ldb, DB* primary){
 	DBT_CLEAR(second_pkey);
     DBT_CLEAR(rec1);
     DBT_CLEAR(rec2);
+    DBT_CLEAR(sd_dbt);
+    DBT_CLEAR(sk_dbt);
 	
 	ldb->cursor(ldb, NULL, &lcur, 0);
     primary->cursor(primary, NULL, &pcur1, 0);
@@ -412,6 +420,21 @@ int analyze(DB* ldb, DB* primary){
     pcur2->close(pcur2);
 
     //open likelihood database
+    sd.density = (match_n+nonmatch_n)/(match_d+nonmatch_d);
+    sd.precision = match_n/match_d;
+    sd.recall = nonmatch_n/nonmatch_d;
+    sd.match_n = match_n;
+    sd.nonmatch_n = nonmatch_n;
+    sd.match_d = match_d;
+    sd.nonmatch_d = nonmatch_d;
+    sd.Pr_M = PR_M;
+    sd.Pr_T = PR_T;
+
+    sd_dbt.data = &sd;
+    sd_dbt.size = sizeof(stat_data);
+
+    stat_db->put(stat_db, NULL, block_dbt, &sd_dbt, 0);
+
     //create block tag, PR_M, PR_T stuct
     //create stat struct
     //write key-data pair to bdb
