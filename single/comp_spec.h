@@ -13,9 +13,10 @@
 #include <math.h>
 #include "strcmp95.h"
 
-#define TRIPLET_ON 1 
-#define PR_M 0.33
-#define PR_T 0.95
+#define ADAPTIVE_PRIOR 0
+#define TRIPLET_ON 1
+#define PR_M 0.05
+#define PR_T 0.90
 #define LIK_WT 4.0
 
 #define LATLON SQLITE_DB_NUMFIELDS
@@ -59,6 +60,7 @@ typedef struct __simprof {
 
 /* Comparison specific globals. */
 extern int (*comp_funcs[])(const void*, const void*, size_t);
+extern int missing_res[];
 extern int extract_idxs[];
 extern size_t sp_offsets[];
 

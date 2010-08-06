@@ -4,7 +4,7 @@
 #define LO 1
 
 extern int compare_records(DBT *, DBT *, simprof *);
-int listcmp(const void *, const void *, size_t, int (*)(const void *, const void*, size_t), size_t, size_t, size_t);
+int listcmp(const void *, const void *, size_t, int, int (*)(const void *, const void*, size_t), size_t, size_t, size_t);
 
 //From comp_spec.c
 int num_comps;

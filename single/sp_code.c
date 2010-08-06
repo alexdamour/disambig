@@ -1,12 +1,13 @@
 #include "sqlite_db.h"
 
 typedef enum _sp_field_num {SP_TYPE, SP_NAME, SP_FUNC, SP_EXTRACT_IDX, SP_GROUP} sp_field_num;
-typedef enum _res_field_num {RES_TYPE, RES_LEVELS} res_field_num;
+typedef enum _res_field_num {RES_TYPE, RES_LEVELS, RES_MISSING} res_field_num;
 typedef enum _train_field_num {TR_GROUP, TR_MATCH_SETS, TR_NONMATCH_SETS} train_field_num;
 
 typedef struct {
     char *type;
     char *levels;
+    char *missing;
 } RESFIELD;
 
 typedef struct {
@@ -354,7 +355,7 @@ parse_res_space(char *p){
         return (1);
     }
 
-    for (cur_field = 0; cur_field <= RES_LEVELS; ++cur_field) {
+    for (cur_field = 0; cur_field <= RES_MISSING; ++cur_field) {
         /* Skip to the next field, if any. */
         for (; *p != '\0' && isspace(*p); ++p)
             ;
@@ -376,6 +377,9 @@ parse_res_space(char *p){
                 break;
             case RES_LEVELS:
                 resfields[res_field_cnt].levels = strdup(p);
+                break;
+            case RES_MISSING:
+                resfields[res_field_cnt].missing = strdup(p);
                 break;
             default:
                 /*NOTRUN*/
@@ -663,6 +667,7 @@ code_header(){
 
     fprintf(hfp, "/* Comparison specific globals. */\n");
     fprintf(hfp, "extern int (*comp_funcs[])(const void*, const void*, size_t);\n");
+    fprintf(hfp, "extern int missing_res[];\n");
     fprintf(hfp, "extern int extract_idxs[];\n");
     fprintf(hfp, "extern size_t sp_offsets[];\n");
     fprintf(hfp, "\n");
@@ -686,8 +691,9 @@ code_header(){
 
 int
 code_source() {
+    RESFIELD *rf;
     SPFIELD *f;
-	u_int i;
+	u_int i, j;
 
 	fprintf(cfp, "/*\n");
 	fprintf(cfp,
@@ -703,6 +709,16 @@ code_source() {
     fprintf(cfp, "int (*comp_funcs[])(const void*, const void*, size_t) = {\n");
     for(f = spfields, i=0; i < sp_field_cnt; ++i, ++f)
         fprintf(cfp, "\t%s,\n", f->func);
+    fprintf(cfp, "};\n\n");
+
+    fprintf(cfp, "/* Missing result array. */\n");
+    fprintf(cfp, "int missing_res[] = {\n");
+    for(f = spfields, i=0; i < sp_field_cnt; ++i, ++f)
+        for(rf = resfields, j=0; j < res_field_cnt; ++j, ++rf)
+            if(strcmp(f->type, rf->type)==0){
+                fprintf(cfp, "\t%s, \n", rf->missing);
+                break;
+            }
     fprintf(cfp, "};\n\n");
 
     fprintf(cfp, "/* Extractor index array. */\n");

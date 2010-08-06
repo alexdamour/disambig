@@ -17,6 +17,17 @@ int (*comp_funcs[])(const void*, const void*, size_t) = {
 	coauthcmp,
 };
 
+/* Missing result array. */
+int missing_res[] = {
+	JWMISSING, 
+	MMISSING, 
+	JWMISSING, 
+	DISTMISSING, 
+	ASGMISSING, 
+	NULL, 
+	NULL, 
+};
+
 /* Extractor index array. */
 int extract_idxs[] = {
 	SQLITE_DB_INDX_FIRSTNAME, 

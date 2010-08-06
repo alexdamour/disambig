@@ -3,6 +3,14 @@
 /*
  * Globals
  */
+#ifndef ADAPTIVE_PRIOR
+#define ADAPTIVE_PRIOR 1
+#endif
+
+#ifndef TRIPLET_ON
+#define TRIPLET_ON 1
+#endif
+
 #ifndef PR_M
 #define PR_M 0.05
 #endif
@@ -10,6 +18,7 @@
 #ifndef PR_T
 #define PR_T 0.5
 #endif
+
 
 #define DEBUG 1
 
@@ -276,9 +285,10 @@ int main(int argc, char** argv){
                             /*if(strcmp(((DbRecord*)data_i.data)->Invnum,"04933465-2")==0 ||
                                 strcmp(((DbRecord*)data_j.data)->Invnum,"04933465-2")==0){*/
                         
-                            if(custom_block && likelihood > PR_T &&
-                                    (strcmp(((DbRecord*)data_i.data)->Invnum, "D0571716-0")==0 ||
-                                    strcmp(((DbRecord*)data_j.data)->Invnum, "D0571716-0")==0))
+                            if(custom_block && likelihood > PR_T && strcmp(((DbRecord*)data_i.data)->Lastname,"JOHNSON")==0&&
+                                                                    strcmp(((DbRecord*)data_j.data)->Lastname,"JOHNSTON")==0)
+                                    //(strcmp(((DbRecord*)data_i.data)->Invnum, "D0571716-0")==0 ||
+                                    //strcmp(((DbRecord*)data_j.data)->Invnum, "D0571716-0")==0))
                             {
                                 DbRecord_dump((DbRecord*)data_i.data);
                                 DbRecord_dump((DbRecord*)data_j.data);
@@ -307,7 +317,7 @@ int main(int argc, char** argv){
             first_time=0;
             num_comps = (dup_count*(dup_count-1))/2;
             //printf("matches: %lu\n", (u_long)matches);
-            if(dup_count > 15 && num_comps != 0 && fabs(((double)(Pr_M*num_comps-matches))/((double)matches)) > 0.001){
+            if(ADAPTIVE_PRIOR && dup_count > 15 && num_comps != 0 && fabs(((double)(Pr_M*num_comps-matches))/((double)matches)) > 0.001){
                 if(custom_block)
                     printf("Pr_M: %g, Emp: %g\n", Pr_M, (double)matches/(double)num_comps);
                 Pr_M = (double)matches/(double)num_comps;//(double)matches/(double)dup_count;
@@ -348,6 +358,7 @@ int main(int argc, char** argv){
     //        free(stat);
             if(done){
                 clump(tag_cur, ldb, first, second, match, db);
+                analyze(ldb, db);
                 tag_cur->close(tag_cur);
             }
             //match->close(match,0);

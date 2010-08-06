@@ -1,9 +1,10 @@
 #include <math.h>
 #include "strcmp95.h"
 
-#define TRIPLET_ON 1 
-#define PR_M 0.33
-#define PR_T 0.95
+#define ADAPTIVE_PRIOR 0
+#define TRIPLET_ON 1
+#define PR_M 0.05
+#define PR_T 0.90
 #define LIK_WT 4.0
 
 #define LATLON SQLITE_DB_NUMFIELDS
@@ -21,13 +22,13 @@ typedef struct {
 } asg_struct;
 
 res_space{
-%   type        levels
-    jwres       JWSUB33,JWMISSING,JW33,JW66,JW100,JW100MULT,JW100MULTFULL
-    asgres      ASGSUB33,ASGMISSING,ASG33,ASG66,ASG100,ASG100MULT,ASGNUM,ASGNUMMED,ASGNUMSMALL
-    distres     DIST100PLUS,DISTMISSING,DIST100,DIST75,DIST50,DIST10NOST,DIST10ST,DIST0ST
-    classres    CLASS0,CLASSMISS,CLASS25,CLASS50,CLASS75PLUS
-    coauthres   C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10
-    midnameres  M0,MMISSING,M33,M67,M100
+%   type        levels                                                                              missing
+    jwres       JWSUB33,JWMISSING,JW33,JW66,JW100,JW100MULT,JW100MULTFULL                           JWMISSING
+    asgres      ASGSUB33,ASGMISSING,ASG33,ASG66,ASG100,ASG100MULT,ASGNUM,ASGNUMMED,ASGNUMSMALL      ASGMISSING
+    distres     DIST100PLUS,DISTMISSING,DIST100,DIST75,DIST50,DIST10NOST,DIST10ST,DIST0ST           DISTMISSING
+    classres    CLASS0,CLASSMISS,CLASS25,CLASS50,CLASS75PLUS                                        CLASSMISS
+    coauthres   C0,C1,C2,C3,C4,C5,C6,C7,C8,C9,C10                                                   NULL
+    midnameres  M0,MMISSING,M33,M67,M100                                                            MMISSING
 }
 
 simprof{

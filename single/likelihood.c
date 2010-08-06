@@ -284,7 +284,7 @@ int clump(DBC* orig, DB* ldb, DB* first, DB* second, DB* match, DB* prim){
         //printf("again!\n");
         changed=0;
         orig->dup(orig, &prim_cur_i, DB_POSITION);
-        prim_cur_i->pget(prim_cur_i, &key_i, &pkey_i, &data_i, DB_CURRENT);
+        prim_cur_i->pget(prim_cur_i, &key_i, &pkey_i, &data_i, DB_CURRENT); //primary get.
         do {
             //Check for a tag
             tagp = has_tag((DbRecord*)data_i.data);
@@ -361,6 +361,60 @@ int clump(DBC* orig, DB* ldb, DB* first, DB* second, DB* match, DB* prim){
     second_cur->close(second_cur);
     return(0);
 }
+
+int analyze(DB* ldb, DB* primary){
+	DBT lkey, lval;
+	DBT first_pkey, second_pkey;
+	DBT rec1, rec2;
+	DBC* lcur, *pcur1, *pcur2;
+    void *old1, *old2;
+	double match_n, nonmatch_n;
+	u_int32_t match_d, nonmatch_d, all;
+	
+	match_n = nonmatch_n = match_d = nonmatch_d = 0;
+	
+	DBT_CLEAR(lkey);
+	DBT_CLEAR(lval);
+	DBT_CLEAR(first_pkey);
+	DBT_CLEAR(second_pkey);
+    DBT_CLEAR(rec1);
+    DBT_CLEAR(rec2);
+	
+	ldb->cursor(ldb, NULL, &lcur, 0);
+    primary->cursor(primary, NULL, &pcur1, 0);
+    primary->cursor(primary, NULL, &pcur2, 0);
+	
+	while(DB_NOTFOUND != lcur->get(lcur, &lkey, &lval, DB_NEXT)){
+		first_index(NULL, &lkey, &lval, &first_pkey);
+		second_index(NULL, &lkey, &lval, &second_pkey);
+
+        old1 = first_pkey.data;
+        old2 = second_pkey.data;
+
+		pcur1->get(pcur1, &first_pkey, &rec1, DB_SET);
+		pcur2->get(pcur2, &second_pkey, &rec2, DB_SET);
+
+        if(tagcmp((DbRecord*)rec1.data, (DbRecord*)rec2.data)==0){
+			match_n += *(double*)lval.data;
+			++match_d;
+		}
+		else {
+			nonmatch_n += *(double*)lval.data;
+			++nonmatch_d;
+		}
+
+        free(old1);
+        free(old2);
+	}
+
+    lcur->close(lcur);
+    pcur1->close(pcur1);
+    pcur2->close(pcur2);
+	
+	printf("density: %g, precision: %g of %lu, recall: %g of %lu\n", (match_n+nonmatch_n)/(match_d+nonmatch_d), match_n/match_d, match_d, 1-nonmatch_n/nonmatch_d, nonmatch_d);
+	return(0);
+}
+	
 
 int first_index(DB* sec, const DBT* key, const DBT* data, DBT* result){
     u_int32_t *prim_key = (u_int32_t*) malloc(sizeof(u_int32_t));
