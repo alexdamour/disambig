@@ -159,7 +159,7 @@ int main(int argc, char** argv){
     for(current_block=block_queue; (use_queue && *current_block != NULL) || first_block; current_block++){
         first_block=0;
         if(use_queue){
-            printf("%s\n", *current_block);
+            //printf("%s\n", *current_block);
             key_i.data = *current_block;
             key_i.size = strlen(*current_block)+1;
         }
