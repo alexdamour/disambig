@@ -35,6 +35,7 @@ int triplet_correct(DBC* orig, DB* lik, DB* first, DB* second, int mode){
     double big1_hat, big2_hat, small_hat;
     double delta = 0;
     int i = 0;
+    int iters=0;
     u_int32_t records;
 
     DB* block_db, *prim_db;
@@ -92,7 +93,9 @@ int triplet_correct(DBC* orig, DB* lik, DB* first, DB* second, int mode){
     //corrected = 0;
     //while(DB_NOTFOUND != 
     //  prim_cur_i->pget(prim_cur_i, &dummy_key, &prim_key_i, &dummy_data, DB_NEXT_NODUP)){
+        iters=0;
         do{
+            iters++;
             records = 0;
             orig->dup(orig, &prim_cur_i, DB_POSITION);
             prim_cur_i->pget(prim_cur_i, &dummy_key, &prim_key_i, &dummy_data, DB_CURRENT);
@@ -179,7 +182,7 @@ int triplet_correct(DBC* orig, DB* lik, DB* first, DB* second, int mode){
             prim_cur_i->close(prim_cur_i);
             //printf("delta: %g\n", delta);
             ++i;
-        } while(delta > records * 0.1);
+        } while(iters < TRIPLET_ITERS && delta > records * 0.1);
         //if(!(++blocks % 1000)){
         //    printf("\t%lu blocks processed...\n", (u_long)blocks);
         //    printf("\t%lu triangles checked...\n", (u_long)triangles);
@@ -366,7 +369,7 @@ int clump(DBC* orig, DB* ldb, DB* first, DB* second, DB* match, DB* prim){
     return(0);
 }
 
-int analyze(DB* stat_db, DBT* block_dbt, DB* ldb, DB* primary){
+int analyze(DB* stat_db, DBT* block_dbt, db_recno_t dup_count, DB* ldb, DB* primary){
 	DBT lkey, lval;
 	DBT first_pkey, second_pkey;
 	DBT rec1, rec2;
@@ -420,6 +423,8 @@ int analyze(DB* stat_db, DBT* block_dbt, DB* ldb, DB* primary){
     pcur2->close(pcur2);
 
     //open likelihood database
+    match_n += dup_count;
+    match_d += dup_count;
     sd.density = (match_n+nonmatch_n)/(match_d+nonmatch_d);
     sd.precision = match_n/match_d;
     sd.recall = nonmatch_n/nonmatch_d;
@@ -433,14 +438,14 @@ int analyze(DB* stat_db, DBT* block_dbt, DB* ldb, DB* primary){
     sd_dbt.data = &sd;
     sd_dbt.size = sizeof(stat_data);
 
-    stat_db->put(stat_db, NULL, block_dbt, &sd_dbt, 0);
+    stat_db->put(stat_db, NULL, block_dbt, &sd_dbt, DB_NOOVERWRITE);
 
     //create block tag, PR_M, PR_T stuct
     //create stat struct
     //write key-data pair to bdb
     //later on, index the database by block, Pr_M, and Pr_T
 	
-	printf("density: %g, precision: %g of %lu, recall: %g of %lu\n", (match_n+nonmatch_n)/(match_d+nonmatch_d), match_n/match_d, match_d, 1-nonmatch_n/nonmatch_d, nonmatch_d);
+	//printf("density: %g, precision: %g of %lu, recall: %g of %lu\n", (match_n+nonmatch_n)/(match_d+nonmatch_d), match_n/match_d, match_d, 1-nonmatch_n/nonmatch_d, nonmatch_d);
 	return(0);
 }
 	

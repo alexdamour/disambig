@@ -72,6 +72,10 @@ CLEAR_OBJS=sqlite_db_local.o db.o util.o clear_tags.o tagfun.o
 clear: $(CLEAR_OBJS)
 	$(CC) -o $@ $(CLEAR_OBJS) $(LIBS)
 
+COPY_STAT_OBJS=sqlite_db_local.o db.o util.o tagfun.o copy_stat_db.o
+copy_stat: $(COPY_STAT_OBJS)
+	$(CC) -o $@ $(COPY_STAT_OBJS) $(LIBS)
+
 clean distclean realclean:
 	rm -rf $(PROGS) TESTDIR eBay tags *.o *.core sqlite_db_local.[ch] build #primary block_idx idx simprof tset0* xset0*
 

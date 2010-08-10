@@ -28,7 +28,9 @@ int	  verbose;			/* Program verbosity */
 char	 *progname;			/* Program name */
 double Pr_M=0.;
 
-//char* on_blocks[] = {"J.SMITH", "D.MORRIS", "J.LEE", NULL};
+//char* block_queue[] = {"J.SMITH", "D.MORRIS", "J.LEE", NULL};
+char* block_queue[] = {"05773227-3","05561360-1","05646023-2","05244818-2","05246970-2","04478747-1","03959022-1","05557722-1","05196311-3","04036732-2","05650948-1","04346595-2","05619699-1","04589006-2","04555706-1","05320730-2","05244818-1","05219749-2","04427886-2","04205119-2","04479380-2","05420926-1","05432542-2","04391901-2","05916381-3","04517253-2","06156576-2","05781752-4","04932160-1","05231580-3","04700887-1","05037201-2","04852577-2","04859865-1","04596145-2","06235480-12","05906723-4","04812314-2","05582578-1","04523625-1","04457174-1","05777078-1","06127166-1","04881166-2","06293760-3","06836028-2","05885820-1","04190495-1","05182752-1","04133294-2","05108907-2","05583946-1","05312396-4","05994690-2","03890706-1","05252912-2","05250818-2","05114528-1","06178539-2","05429708-1","06132801-1","05404439-2","05020121-1","04862503-1","05371002-2","05877070-2","04936957-3","04674878-1","05192416-1","05274644-3","05726658-4","05957197-1","05538898-2","05141403-4","04081372-1","05120046-3","04659637-2","05149420-1","06183543-1","04220958-1","05679783-1","04822208-1","04028279-3","04246092-2","06755735-1","04282034-2","05421339-1","06825928-2","05156485-2","04515505-4","06081746-2","04102997-2","03932392-1","04557931-5","04331021-2","04740430-2","05846536-1","05534232-1","04781683-2","04719177-2","04110661-4","04236296-4","06001702-4","04631190-1","03899579-1","05448706-2","04686641-1","05006424-1","04868396-1", NULL};
+//char* block_queue[] = {"05773227-3", NULL};
 
 int main(int argc, char** argv){
     //This should be updated soon to use batch reads and writes
@@ -64,6 +66,10 @@ int main(int argc, char** argv){
     DBT data_sp, key_sp;
     DBT key_lik, data_lik;
     DBT lik_val, lik_cnt;
+
+    int first_block=1;
+    char **current_block;
+    int use_queue=0;
 
     memset(&data_i, 0, sizeof(data_i));
     memset(&key_i, 0, sizeof(data_i));
@@ -112,7 +118,7 @@ int main(int argc, char** argv){
     memset(&key_i, 0, sizeof(key_i));
     memset(&pkey_i, 0, sizeof(pkey_i));
 
-    while ((ch = getopt(argc, argv, "b:")) != EOF)
+    while ((ch = getopt(argc, argv, "b:q")) != EOF)
 		switch (ch) {
 		case 'b':
             key_i.data = optarg;
@@ -120,6 +126,10 @@ int main(int argc, char** argv){
             printf("%s, %u\n", key_i.data, key_i.size);
             custom_block = 1;
 			break;
+        case 'q':
+            custom_block=1;
+            use_queue = 1;
+            break;
         }
 
     argc -= optind;
@@ -146,6 +156,14 @@ int main(int argc, char** argv){
             if((ret = cur_i->pget(cur_i, &key_i, &pkey_i, &data_i, DB_FIRST)))
                 return(1);
 */
+    for(current_block=block_queue; (use_queue && *current_block != NULL) || first_block; current_block++){
+        first_block=0;
+        if(use_queue){
+            printf("%s\n", *current_block);
+            key_i.data = *current_block;
+            key_i.size = strlen(*current_block)+1;
+        }
+
     i=0;
     while(custom_block && DB_NOTFOUND !=
             cur_i->pget(cur_i, &key_i, &pkey_i, &data_i, (i ? DB_NEXT_DUP : DB_SET))){
@@ -201,10 +219,9 @@ int main(int argc, char** argv){
             if(custom_block){
                 memset(((DbRecord*)data_i.data)->Invnum_N, '\0', 16);
                 //printf("Block already has a tag. Clear tags and try again.\n");
-                ;
             }
-            
-            continue;
+            else 
+                continue;
         }
         //else printf("Blocks previously processed: %lu\n", (ulong)block_num); 
         done = 0;
@@ -359,7 +376,7 @@ int main(int argc, char** argv){
     //        free(stat);
             if(done){
                 clump(tag_cur, ldb, first, second, match, db);
-                analyze(stat_db, &key_i, ldb, db);
+                analyze(stat_db, &key_i, dup_count, ldb, db);
                 tag_cur->close(tag_cur);
             }
             //match->close(match,0);
@@ -385,11 +402,13 @@ int main(int argc, char** argv){
         if(custom_block)
             break;
     }
-    free(spkey_buf);
 
     /*Clean up the comparison environment. */
     comp_env_clean();
 
+
+    }
+    free(spkey_buf);
     end = clock();
 
     //ldb->stat_print(ldb, DB_STAT_ALL);

@@ -13,11 +13,12 @@
 #include <math.h>
 #include "strcmp95.h"
 
-#define ADAPTIVE_PRIOR 0
+#define ADAPTIVE_PRIOR 1
 #define TRIPLET_ON 1
-#define PR_M 0.05
-#define PR_T 0.90
-#define LIK_WT 4.0
+#define TRIPLET_ITERS 5
+#define PR_M 0.33
+#define PR_T 0.95
+#define LIK_WT 4.0 
 
 #define LATLON SQLITE_DB_NUMFIELDS
 #define ASG_FIELDS  SQLITE_DB_NUMFIELDS+1

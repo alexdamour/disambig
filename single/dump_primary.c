@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     int sql_ret;
     sqlite3_int64 mem_lim = 1*1024*1024;
     mem_lim *= 1024;
-    u_int32_t numrecs = 0;
+    u_int32_t numrecs = 0, numblocks=0;
     //DB_BTREE_STAT *stat;
     //char sql_query[256];
     //sprintf(sql_query, "update %s set Invnum_N = ? where invnum = ?;", table);
@@ -32,8 +32,9 @@ int main(int argc, char *argv[])
     //char *sql_query2 = "select * from invpat where Patent = ? and InvSeq = ?;";
     db_recno_t dup_count;
 
-    int custom_block;
-    u_int32_t start_rec = 0;
+    int custom_block=0;
+    int has_max = 0;
+    u_int32_t start_rec = 0, end_block = 0;
     char ch;
 
     memset(&key, 0, sizeof(key));
@@ -55,7 +56,7 @@ int main(int argc, char *argv[])
 
     printf("Starting writes!\n");
 
-    while ((ch = getopt(argc, argv, "b:n:")) != EOF)
+    while ((ch = getopt(argc, argv, "b:n:x:")) != EOF)
 		switch (ch) {
 		case 'b':
             key.data = optarg;
@@ -70,6 +71,10 @@ int main(int argc, char *argv[])
         case 'n':
             start_rec = (u_int32_t)atol(optarg);
             break;
+        case 'x':
+            end_block = (u_int32_t)atol(optarg);
+            has_max = 1;
+            break;
         }
     argc -= optind;
 	argv += optind;
@@ -81,6 +86,7 @@ int main(int argc, char *argv[])
 
     while(DB_NOTFOUND != cur->pget(cur, &key, &pkey, &data,
                 (custom_block? DB_SET : DB_NEXT_NODUP))){
+        if(has_max && numblocks++ >= end_block) break;
         do{
             if(!(++numrecs % 10000)){
                 primary->sync(primary, 0);
