@@ -1,11 +1,12 @@
 from distutils.core import setup, Extension
 
-DB_INCLUDE = '/usr/local/bdb/include'
-DB_LIBS = '/usr/local/bdb/lib'
+DB_INCLUDE = '/usr/local/BerkeleyDB.4.7/include'
+DB_LIBS = '/usr/local/BerkeleyDB.4.7/lib'
 
 module1 = Extension('disambig_db',
                     sources = ['py_quadprog.c'],
-                    extra_objects = ['train.o'],
+                    extra_objects=['sqlite_db_local.o','db.o','util.o','train.o','train_main.o','compfun.o','comp_env.o','extractfun.o','comp_engine.o','comp_spec.o','strcmp95.o','indexfun.o'],
+
                     include_dirs = ['.',
                         DB_INCLUDE,
                         '/usr/include'],
