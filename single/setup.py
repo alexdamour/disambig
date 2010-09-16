@@ -1,7 +1,7 @@
 from distutils.core import setup, Extension
 
-DB_INCLUDE = '/usr/local/BerkeleyDB.4.7/include'
-DB_LIBS = '/usr/local/BerkeleyDB.4.7/lib'
+DB_INCLUDE = '/usr/local/bdb/include'
+DB_LIBS = '/usr/local/bdb/lib'
 
 module1 = Extension('disambig_db',
                     sources = ['py_quadprog.c'],
