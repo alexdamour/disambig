@@ -10,6 +10,9 @@ char *progname;
 #define LIK_WT 4.0
 #endif
 
+#ifndef TRIPLET_ITERS
+#define TRIPLET_ITERS 10
+#endif
 
 //double Pr_M = 1./100;
 u_int32_t records = 0;
